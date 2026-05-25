@@ -70,6 +70,61 @@ function formatDate(dateStr) {
   return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
+// ─── USTA Paste Parser ────────────────────────────────────────────────────────
+
+function toTitleCase(s) {
+  return s.toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+}
+
+// "Boys' 14 & under Singles" → "B14"
+function abbreviateEvent(event) {
+  if (!event) return '';
+  const m = event.match(/(Boys|Girls)'?\s+(\d+)\s*&\s*under/i);
+  if (!m) return '';
+  return m[1][0].toUpperCase() + m[2];
+}
+
+// Detect and parse full USTA Players page copy-paste.
+// Expected format per player row: "LASTNAME, Firstname  Event  City, State  Gender"
+function parseUstaDump(raw) {
+  const players = [];
+  const seen = new Set();
+
+  for (const line of raw.split('\n')) {
+    const trimmed = line.trim();
+    // Columns separated by 2+ spaces or tabs
+    const cols = trimmed.split(/\s{2,}|\t+/);
+    const nameCol = cols[0] || '';
+
+    // Match "ALLCAPS_LASTNAME, Firstname" — uppercase last name, comma, mixed-case first name
+    const nameMatch = nameCol.match(/^([A-Z][A-Z\s\-']*),\s*(.+)$/);
+    if (!nameMatch) continue;
+
+    const lastName = toTitleCase(nameMatch[1].trim());
+    const firstName = nameMatch[2].trim();
+
+    let event = '', city = '', state = '';
+    if (cols.length >= 4) {
+      event = cols[1]?.trim() || '';
+      const cityState = cols[2]?.trim() || '';
+      const csMatch = cityState.match(/^(.+),\s*([A-Z]{2})$/);
+      if (csMatch) { city = csMatch[1].trim(); state = csMatch[2].trim(); }
+      else { city = cityState; }
+    } else if (cols.length >= 2) {
+      event = cols[1]?.trim() || '';
+    }
+
+    // Deduplicate by full name (same player in multiple events)
+    const key = `${firstName} ${lastName}`.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    players.push({ firstName, lastName, event, city, state });
+  }
+
+  return players;
+}
+
 // ─── USTA API ─────────────────────────────────────────────────────────────────
 
 async function fetchUstaParticipants(tournamentId) {
@@ -188,24 +243,31 @@ async function utrFetch(path, params = {}) {
   return res.json();
 }
 
-async function searchUtrPlayer(firstName, lastName) {
+async function searchUtrPlayer(firstName, lastName, city = '', state = '') {
   const query = `${firstName} ${lastName}`.trim();
   const data = await utrFetch('/api/v2/search/players', { query, top: 5 });
   const hits = data.hits || [];
+  if (!hits.length) return null;
 
-  // Try to find exact name match first
   const nameLower = query.toLowerCase();
-  const exact = hits.find(h => {
+
+  // Score each candidate: exact name > location match > has a real UTR rating
+  const scored = hits.map(h => {
     const src = h.source;
-    const full = `${src.firstName} ${src.lastName}`.toLowerCase();
-    return full === nameLower;
+    const fullName = `${src.firstName} ${src.lastName}`.toLowerCase();
+    let score = 0;
+    if (fullName === nameLower) score += 100;
+    // UTR may expose location under different field shapes
+    const srcCity = (src.location?.city || src.city || '').toLowerCase();
+    const srcState = (src.location?.state || src.state || '').toLowerCase();
+    if (city && srcCity && srcCity === city.toLowerCase()) score += 20;
+    if (state && srcState && srcState === state.toLowerCase()) score += 10;
+    if (src.singlesUtr > 0) score += 5;
+    return { src, score };
   });
 
-  if (exact) return exact.source;
-
-  // Fall back to best fuzzy match (first result with a non-zero UTR or any result)
-  const rated = hits.find(h => h.source.singlesUtr > 0);
-  return (rated || hits[0])?.source || null;
+  scored.sort((a, b) => b.score - a.score);
+  return scored[0].src || null;
 }
 
 async function fetchUtrResults(utrId, year = CURRENT_YEAR) {
@@ -273,7 +335,7 @@ function renderTable(players) {
   tableBody.innerHTML = '';
   sorted.forEach((p, i) => {
     const tr = document.createElement('tr');
-    tr.dataset.id = p.utrId;
+    tr.dataset.id = p.utrProfileId || '';
     tr.innerHTML = renderRow(p, i + 1);
     tableBody.appendChild(tr);
   });
@@ -289,13 +351,18 @@ function renderTable(players) {
 
 function renderRow(p, rank) {
   const location = [p.city, p.state].filter(Boolean).join(', ');
-  const utrProfileUrl = p.utrId
-    ? `https://app.universaltennis.com/profiles/${p.utrId}`
+  const utrProfileUrl = p.utrProfileId
+    ? `https://app.universaltennis.com/profiles/${p.utrProfileId}`
     : null;
 
   const nameCell = utrProfileUrl
     ? `<a href="${utrProfileUrl}" target="_blank">${p.firstName} ${p.lastName}</a>`
     : `${p.firstName} ${p.lastName}`;
+
+  const eventAbbr = abbreviateEvent(p.event);
+  const eventTag = eventAbbr
+    ? `<span class="event-tag" title="${p.event || ''}">${eventAbbr}</span>`
+    : '';
 
   const singlesCell = p.loading
     ? `<span class="loading-cell">loading…</span>`
@@ -321,7 +388,7 @@ function renderRow(p, rank) {
 
   return `
     <td class="rank">${rank}</td>
-    <td class="name">${nameCell}${location ? `<div class="location">${location}</div>` : ''}</td>
+    <td class="name">${nameCell}${eventTag}${location ? `<div class="location">${location}</div>` : ''}</td>
     <td>${singlesCell}</td>
     <td>${doublesCell}</td>
     <td class="wl">${winsCell}</td>
@@ -399,7 +466,7 @@ async function loadTournament() {
       const batch = allPlayers.slice(i, i + BATCH);
       await Promise.all(batch.map(async (player) => {
         try {
-          const utrPlayer = await searchUtrPlayer(player.firstName, player.lastName);
+          const utrPlayer = await searchUtrPlayer(player.firstName, player.lastName, player.city, player.state);
           if (utrPlayer) {
             player.utrProfileId = utrPlayer.id;
             player.singles = utrPlayer.singlesUtr || 0;
@@ -451,13 +518,25 @@ async function loadManual() {
   const raw = namesInput.value.trim();
   if (!raw) { showStatus('Please paste at least one player name.', 'error'); return; }
 
-  const names = raw.split('\n')
-    .map(l => l.trim())
-    .filter(Boolean)
-    .map(line => {
-      const parts = line.split(/\s+/);
-      return { firstName: parts.slice(0, -1).join(' ') || parts[0], lastName: parts.slice(-1)[0] || '' };
-    });
+  // Auto-detect USTA full-page paste: lines with "ALLCAPS_LASTNAME, Firstname" pattern
+  const isUstaDump = raw.split('\n').some(l => /^[A-Z][A-Z\s\-']*,\s+[A-Z][a-z]/.test(l.trim()));
+
+  let names;
+  if (isUstaDump) {
+    names = parseUstaDump(raw);
+    if (!names.length) {
+      showStatus('Could not parse player names. Make sure you copied from the USTA Players tab.', 'error');
+      return;
+    }
+  } else {
+    names = raw.split('\n')
+      .map(l => l.trim())
+      .filter(Boolean)
+      .map(line => {
+        const parts = line.split(/\s+/);
+        return { firstName: parts.slice(0, -1).join(' ') || parts[0], lastName: parts.slice(-1)[0] || '' };
+      });
+  }
 
   loadBtn2.disabled = true;
   tableWrap.style.display = 'none';
@@ -481,7 +560,7 @@ async function loadManual() {
     const batch = allPlayers.slice(i, i + BATCH);
     await Promise.all(batch.map(async (player) => {
       try {
-        const utrPlayer = await searchUtrPlayer(player.firstName, player.lastName);
+        const utrPlayer = await searchUtrPlayer(player.firstName, player.lastName, player.city, player.state);
         if (utrPlayer) {
           player.utrProfileId = utrPlayer.id;
           player.singles = utrPlayer.singlesUtr || 0;

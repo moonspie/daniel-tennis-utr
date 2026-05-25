@@ -151,6 +151,18 @@
     td.name a { color: #0a2342; text-decoration: none; }
     td.name a:hover { text-decoration: underline; }
     td.name .location { color: #888; font-size: 0.76rem; font-weight: 400; margin-top: 1px; }
+    td.name .event-tag {
+      display: inline-block;
+      font-size: 0.66rem;
+      font-weight: 700;
+      padding: 1px 5px;
+      border-radius: 8px;
+      background: #e8f0fe;
+      color: #1a6bc1;
+      margin-left: 6px;
+      vertical-align: middle;
+      letter-spacing: 0.3px;
+    }
 
     .utr-score {
       font-weight: 700;
@@ -289,8 +301,11 @@
   </div>
 
   <div id="manualSection">
-    <p class="hint" style="margin-bottom:8px">Copy player names from the USTA Players page and paste here — one name per line (e.g. <em>John Smith</em>). Or use the <strong>Bookmarklet</strong> tab to extract names automatically.</p>
-    <textarea id="namesInput" placeholder="John Smith&#10;Jane Doe&#10;Michael Chen&#10;..."></textarea>
+    <p class="hint" style="margin-bottom:8px">
+      <strong>Option A:</strong> On the USTA Players page, select all (Cmd+A) and copy — paste the entire page here. Names, age groups, and locations are extracted automatically.<br>
+      <strong>Option B:</strong> One name per line (e.g. <em>John Smith</em>).
+    </p>
+    <textarea id="namesInput" style="height:200px" placeholder="Paste full USTA Players page content, or one name per line:&#10;&#10;BELL, Thomaz    Boys' 12 &amp; under Singles    San Juan, PR    M&#10;BERMUDEZ, Vicente    Boys' 16 &amp; under Singles    Arlington, VA    M&#10;&#10;— or —&#10;&#10;John Smith&#10;Jane Doe"></textarea>
     <div style="margin-top:8px">
       <button id="loadBtn2" style="padding:10px 22px;background:#0a2342;color:white;border:none;border-radius:6px;font-size:0.9rem;font-weight:600;cursor:pointer">Look Up UTR</button>
     </div>
