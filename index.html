@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>USTA Tournament — UTR Lookup</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f7fa;
+      color: #1a1a2e;
+      min-height: 100vh;
+    }
+
+    header {
+      background: #0a2342;
+      color: white;
+      padding: 18px 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    header h1 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      letter-spacing: -0.3px;
+    }
+
+    header span.badge {
+      background: #4fc3f7;
+      color: #0a2342;
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 10px;
+      text-transform: uppercase;
+    }
+
+    .input-section {
+      background: white;
+      border-bottom: 1px solid #e0e0e0;
+      padding: 20px 24px;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 10px;
+      max-width: 900px;
+    }
+
+    .input-row input {
+      flex: 1;
+      padding: 10px 14px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .input-row input:focus { border-color: #0a2342; }
+
+    .input-row input::placeholder { color: #aaa; }
+
+    button#loadBtn {
+      padding: 10px 22px;
+      background: #0a2342;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.2s;
+    }
+
+    button#loadBtn:hover { background: #1a3a5c; }
+    button#loadBtn:disabled { background: #888; cursor: not-allowed; }
+
+    .hint {
+      margin-top: 8px;
+      font-size: 0.78rem;
+      color: #888;
+    }
+
+    .main { padding: 24px; max-width: 1100px; }
+
+    #status {
+      padding: 12px 16px;
+      border-radius: 6px;
+      font-size: 0.88rem;
+      margin-bottom: 16px;
+      display: none;
+    }
+
+    #status.info { background: #e3f2fd; color: #1565c0; display: block; }
+    #status.error { background: #ffebee; color: #c62828; display: block; }
+    #status.success { background: #e8f5e9; color: #2e7d32; display: block; }
+
+    #tournamentTitle {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 16px;
+      color: #0a2342;
+      display: none;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+    }
+
+    thead th {
+      background: #0a2342;
+      color: white;
+      padding: 12px 14px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 0.8rem;
+      letter-spacing: 0.3px;
+      cursor: pointer;
+      white-space: nowrap;
+      user-select: none;
+    }
+
+    thead th:hover { background: #1a3a5c; }
+    thead th.sorted-asc::after { content: ' ↑'; }
+    thead th.sorted-desc::after { content: ' ↓'; }
+
+    tbody tr { border-bottom: 1px solid #f0f0f0; transition: background 0.1s; }
+    tbody tr:hover { background: #fafbff; }
+    tbody tr:last-child { border-bottom: none; }
+
+    td { padding: 11px 14px; vertical-align: top; }
+
+    td.rank { color: #888; font-size: 0.8rem; width: 36px; text-align: center; }
+
+    td.name { font-weight: 600; }
+    td.name a { color: #0a2342; text-decoration: none; }
+    td.name a:hover { text-decoration: underline; }
+    td.name .location { color: #888; font-size: 0.76rem; font-weight: 400; margin-top: 1px; }
+
+    .utr-score {
+      font-weight: 700;
+      font-size: 1rem;
+    }
+
+    .utr-badge {
+      display: inline-block;
+      font-size: 0.68rem;
+      font-weight: 600;
+      padding: 1px 6px;
+      border-radius: 8px;
+      margin-left: 4px;
+      vertical-align: middle;
+    }
+
+    .badge-rated { background: #e8f5e9; color: #2e7d32; }
+    .badge-projected { background: #fff8e1; color: #f57f17; }
+    .badge-unrated { background: #f5f5f5; color: #757575; }
+
+    td.wl { white-space: nowrap; }
+    td.wl .wl-num { font-weight: 600; }
+    td.wl .wl-num.wins { color: #2e7d32; }
+    td.wl .wl-num.losses { color: #c62828; }
+
+    .matches { font-size: 0.78rem; color: #555; line-height: 1.7; }
+    .match-win { color: #2e7d32; font-weight: 600; }
+    .match-loss { color: #c62828; font-weight: 600; }
+    .match-opp { color: #333; }
+    .match-score { color: #666; font-family: monospace; }
+    .match-date { color: #aaa; font-size: 0.72rem; }
+
+    .loading-cell { color: #aaa; font-style: italic; }
+
+    .no-utr { color: #bbb; font-style: italic; font-size: 0.82rem; }
+
+    .progress-bar {
+      height: 4px;
+      background: #e0e0e0;
+      border-radius: 2px;
+      overflow: hidden;
+      margin-top: 8px;
+      display: none;
+    }
+
+    .progress-bar.visible { display: block; }
+
+    .progress-fill {
+      height: 100%;
+      background: #4fc3f7;
+      border-radius: 2px;
+      transition: width 0.3s ease;
+    }
+
+    #emptyMsg {
+      text-align: center;
+      color: #aaa;
+      padding: 48px;
+      font-size: 0.9rem;
+      display: none;
+    }
+
+    footer {
+      text-align: center;
+      padding: 24px;
+      color: #bbb;
+      font-size: 0.75rem;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>USTA Tournament UTR Lookup</h1>
+  <span class="badge">Beta</span>
+</header>
+
+<div class="input-section">
+  <div class="input-row">
+    <input id="urlInput" type="text"
+      placeholder="Paste USTA tournament URL — e.g. https://playtennis.usta.com/Competitions/.../Tournaments/overview/UUID"
+      autocomplete="off" spellcheck="false">
+    <button id="loadBtn">Load</button>
+  </div>
+  <p class="hint">Fetches the player list from USTA, then looks up each player's UTR rating and recent match history.</p>
+  <div class="progress-bar" id="progressBar">
+    <div class="progress-fill" id="progressFill"></div>
+  </div>
+</div>
+
+<div class="main">
+  <div id="status"></div>
+  <div id="tournamentTitle"></div>
+  <div class="table-wrap" id="tableWrap" style="display:none">
+    <table id="playerTable">
+      <thead>
+        <tr>
+          <th class="rank">#</th>
+          <th data-col="name">Player</th>
+          <th data-col="singles" class="sorted-desc">UTR Singles</th>
+          <th data-col="doubles">UTR Doubles</th>
+          <th data-col="wins">Wins</th>
+          <th data-col="losses">Losses</th>
+          <th>Recent Matches (Singles)</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
+  <div id="emptyMsg">No players found for this tournament.</div>
+</div>
+
+<footer>
+  Data from USTA &amp; UTR. For personal use only. Not affiliated with USTA or UTR Sports.
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>

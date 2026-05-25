@@ -1,0 +1,12 @@
+{
+  "name": "daniel-tennis-utr",
+  "version": "1.0.0",
+  "description": "View UTR scores for USTA tournament players",
+  "private": true,
+  "scripts": {
+    "dev": "vercel dev"
+  },
+  "dependencies": {
+    "node-fetch": "^3.3.2"
+  }
+}
