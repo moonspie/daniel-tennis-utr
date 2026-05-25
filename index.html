@@ -275,6 +275,7 @@
   <div class="tabs">
     <button class="tab-btn active" id="tabUrl">USTA URL</button>
     <button class="tab-btn" id="tabManual">Paste Player Names</button>
+    <button class="tab-btn" id="tabBookmarklet">Bookmarklet Setup</button>
   </div>
 
   <div id="urlSection">
@@ -288,11 +289,29 @@
   </div>
 
   <div id="manualSection">
-    <p class="hint" style="margin-bottom:8px">Copy player names from the USTA Players page and paste here — one name per line (e.g. <em>John Smith</em>).</p>
+    <p class="hint" style="margin-bottom:8px">Copy player names from the USTA Players page and paste here — one name per line (e.g. <em>John Smith</em>). Or use the <strong>Bookmarklet</strong> tab to extract names automatically.</p>
     <textarea id="namesInput" placeholder="John Smith&#10;Jane Doe&#10;Michael Chen&#10;..."></textarea>
     <div style="margin-top:8px">
       <button id="loadBtn2" style="padding:10px 22px;background:#0a2342;color:white;border:none;border-radius:6px;font-size:0.9rem;font-weight:600;cursor:pointer">Look Up UTR</button>
     </div>
+  </div>
+
+  <div id="bookmarkletSection" style="display:none; max-width:700px">
+    <p class="hint" style="margin-bottom:12px">The bookmarklet runs in your browser on the USTA Players page. It reads the rendered player list (even for club-level tournaments that require login) and sends the names here automatically.</p>
+    <p style="font-size:0.88rem;font-weight:600;margin-bottom:8px;color:#333">Step 1 — Drag this link to your bookmarks bar:</p>
+    <div style="margin-bottom:16px">
+      <a id="bookmarkletLink" href="" style="display:inline-block;padding:10px 18px;background:#1565c0;color:white;text-decoration:none;border-radius:6px;font-size:0.9rem;font-weight:600;cursor:grab">
+        &#128279; USTA → UTR Lookup
+      </a>
+      <span style="margin-left:12px;font-size:0.78rem;color:#888">(drag this to your bookmarks bar)</span>
+    </div>
+    <p style="font-size:0.88rem;font-weight:600;margin-bottom:4px;color:#333">Step 2 — Use it:</p>
+    <ol style="font-size:0.85rem;color:#555;line-height:1.9;padding-left:20px">
+      <li>Go to a USTA tournament's <strong>Players</strong> page (log in if needed)</li>
+      <li>Wait for the player list to load</li>
+      <li>Click the <strong>USTA → UTR Lookup</strong> bookmark</li>
+      <li>This site opens with all player names pre-filled, UTR lookup starts automatically</li>
+    </ol>
   </div>
 
   <div class="progress-bar" id="progressBar">

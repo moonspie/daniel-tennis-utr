@@ -18,8 +18,10 @@ const loadBtn2 = document.getElementById('loadBtn2');
 const namesInput = document.getElementById('namesInput');
 const tabUrl = document.getElementById('tabUrl');
 const tabManual = document.getElementById('tabManual');
+const tabBookmarklet = document.getElementById('tabBookmarklet');
 const urlSection = document.getElementById('urlSection');
 const manualSection = document.getElementById('manualSection');
+const bookmarkletSection = document.getElementById('bookmarkletSection');
 const statusEl = document.getElementById('status');
 const titleEl = document.getElementById('tournamentTitle');
 const tableWrap = document.getElementById('tableWrap');
@@ -514,15 +516,78 @@ async function loadManual() {
 
 // ─── Event Listeners ──────────────────────────────────────────────────────────
 
-tabUrl.addEventListener('click', () => {
-  tabUrl.classList.add('active'); tabManual.classList.remove('active');
-  urlSection.style.display = ''; manualSection.style.display = 'none';
-});
+// ─── Bookmarklet ──────────────────────────────────────────────────────────────
 
-tabManual.addEventListener('click', () => {
-  tabManual.classList.add('active'); tabUrl.classList.remove('active');
-  manualSection.style.display = ''; urlSection.style.display = 'none';
-});
+function buildBookmarklet() {
+  const siteUrl = window.location.origin;
+  // This script runs on the USTA Players page in the user's browser.
+  // It finds player name elements rendered by the React SPA, collects them,
+  // then opens our site with those names pre-filled.
+  const script = `(function(){
+    var names=new Set();
+    // Try multiple selectors that USTA's venue-tournaments app uses for player names
+    var selectors=[
+      'a[href*="/profiles/"]',
+      '[class*="playerName"]',
+      '[class*="player-name"]',
+      '[class*="participantName"]',
+      'td a',
+      '[class*="name"] a',
+      '[class*="player"] strong',
+      'table td:first-child',
+      'table td:nth-child(2)',
+    ];
+    selectors.forEach(function(sel){
+      document.querySelectorAll(sel).forEach(function(el){
+        var t=(el.innerText||el.textContent||'').trim();
+        if(t.length>3&&t.length<50&&t.indexOf('@')<0&&/[A-Za-z]/.test(t)&&t.split(' ').length>=2){
+          names.add(t);
+        }
+      });
+    });
+    if(names.size===0){
+      alert('No player names found. Make sure the Players tab is selected and the list has loaded.');
+      return;
+    }
+    var list=Array.from(names).join('\\n');
+    var url='${siteUrl}?names='+encodeURIComponent(list);
+    window.open(url,'_blank');
+  })();`;
+  return 'javascript:' + script;
+}
+
+function initBookmarklet() {
+  const link = document.getElementById('bookmarkletLink');
+  if (link) link.href = buildBookmarklet();
+}
+
+// ─── Auto-load from URL params (sent by bookmarklet) ─────────────────────────
+
+function checkUrlParams() {
+  const params = new URLSearchParams(window.location.search);
+  const names = params.get('names');
+  if (!names) return;
+  // Switch to manual tab and pre-fill
+  namesInput.value = decodeURIComponent(names);
+  tabManual.click();
+  // Auto-start lookup
+  setTimeout(() => loadManual(), 300);
+}
+
+// ─── Tab switching ────────────────────────────────────────────────────────────
+
+function showTab(tab) {
+  [tabUrl, tabManual, tabBookmarklet].forEach(b => b.classList.remove('active'));
+  [urlSection, manualSection, bookmarkletSection].forEach(s => s.style.display = 'none');
+  tab.classList.add('active');
+  if (tab === tabUrl) urlSection.style.display = 'block';
+  else if (tab === tabManual) manualSection.style.display = 'block';
+  else if (tab === tabBookmarklet) { bookmarkletSection.style.display = 'block'; initBookmarklet(); }
+}
+
+tabUrl.addEventListener('click', () => showTab(tabUrl));
+tabManual.addEventListener('click', () => showTab(tabManual));
+tabBookmarklet.addEventListener('click', () => showTab(tabBookmarklet));
 
 loadBtn.addEventListener('click', loadTournament);
 loadBtn2.addEventListener('click', loadManual);
@@ -543,3 +608,11 @@ document.querySelectorAll('thead th[data-col]').forEach(th => {
     renderTable(allPlayers);
   });
 });
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+
+// Show initial tab state correctly
+urlSection.style.display = 'block';
+
+// Check if bookmarklet sent names via URL params
+checkUrlParams();
