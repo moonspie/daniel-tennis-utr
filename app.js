@@ -272,10 +272,61 @@ async function searchUtrPlayer(firstName, lastName, city = '', state = '') {
   return scored[0]?.src || null;
 }
 
-// Returns top N candidates (for interactive search)
-async function searchUtrCandidates(name, city = '', state = '') {
-  const hits = ((await utrFetch('/api/v2/search/players', { query: name.trim(), top: 5 })).hits) || [];
-  return hits.map(h => h.source);
+// Parse one search line: "Name" | "Name, City" | "Name, Age" | "Name, City, Age"
+// Age tokens: "12", "B12", "G14", "16", etc.
+function parseSearchLine(line) {
+  const parts = line.split(',').map(s => s.trim()).filter(Boolean);
+  const name = parts[0] || '';
+  let city = '', ageHint = '';
+  for (let i = 1; i < parts.length; i++) {
+    const p = parts[i];
+    if (/^[BGbg]?\d+$/.test(p)) {
+      ageHint = p.replace(/^[BGbg]/i, '');  // "B12" -> "12"
+    } else {
+      city = p;
+    }
+  }
+  return { name, city, ageHint };
+}
+
+// Map UTR's ageRange (e.g. "U13") to standard junior category (e.g. "12")
+// Only returns recognized values; hides "U3" and other data artefacts
+function normalizeAgeRange(ageRange) {
+  if (!ageRange) return '';
+  const m = ageRange.match(/^U(\d+)$/i);
+  if (m) {
+    const n = parseInt(m[1]) - 1;  // U13 -> 12, U15 -> 14, U17 -> 16
+    const valid = [10, 12, 14, 16, 18];
+    return valid.includes(n) ? String(n) : '';
+  }
+  if (/^\d+-\d+$/.test(ageRange)) return ageRange;  // "14-18"
+  return '';
+}
+
+// Returns top N candidates scored by city + age hints
+async function searchUtrCandidates(name, city = '', ageHint = '') {
+  const hits = ((await utrFetch('/api/v2/search/players', { query: name.trim(), top: 8 })).hits) || [];
+  let sources = hits.map(h => h.source);
+
+  if (!city && !ageHint) return sources.slice(0, 5);
+
+  const targetCity = normCity(city);
+  const targetAge  = parseInt(ageHint) || 0;
+
+  const scored = sources.map(src => {
+    let score = 0;
+    const srcCity = normCity(src.location?.cityName || src.location?.display?.split(',')[0]);
+    if (targetCity && srcCity && srcCity === targetCity) score += 20;
+
+    if (targetAge) {
+      const normalized = normalizeAgeRange(src.ageRange || '');
+      if (normalized && parseInt(normalized) === targetAge) score += 15;
+    }
+    return { src, score };
+  });
+
+  scored.sort((a, b) => b.score - a.score);
+  return scored.slice(0, 5).map(s => s.src);
 }
 
 async function fetchUtrProfile(utrId) {
@@ -348,7 +399,7 @@ function parseRecentMatches(resultsData, utrId, maxMatches = 5) {
 
 function candidateCardHtml(src, gi, ci) {
   const loc      = src.location?.display || '';
-  const ageRange = src.ageRange || '';
+  const ageLabel = normalizeAgeRange(src.ageRange || '');
   const utrHint  = (src.threeMonthRating && src.threeMonthRating > 0)
     ? `~${src.threeMonthRating.toFixed(1)}`
     : (src.utrRange ? `${src.utrRange.minUtr}–${src.utrRange.maxUtr}` : '?');
@@ -356,8 +407,8 @@ function candidateCardHtml(src, gi, ci) {
   return `<div class="candidate-card${added ? ' added' : ''}" data-gi="${gi}" data-ci="${ci}">
     <div class="c-name">${src.firstName} ${src.lastName}</div>
     <div class="c-loc">${loc || 'Unknown location'}</div>
-    <div class="c-utr">UTR ${utrHint}<span class="c-age"> ${ageRange}</span></div>
-    <span class="c-add">${added ? 'Added' : '+ Add'}</span>
+    <div class="c-utr">UTR ${utrHint}${ageLabel ? `<span class="c-age"> &middot; ${ageLabel}</span>` : ''}</div>
+    <span class="c-add">${added ? 'x Remove' : '+ Add'}</span>
   </div>`;
 }
 
@@ -651,11 +702,12 @@ async function handleSearch() {
   candidateArea.style.display = 'none';
 
   try {
-    // Run all queries in parallel
+    // Parse each line and run all queries in parallel
     const groups = await Promise.all(
       queries.map(async (q) => {
         try {
-          const sources = await searchUtrCandidates(q);
+          const { name, city, ageHint } = parseSearchLine(q);
+          const sources = await searchUtrCandidates(name, city, ageHint);
           return { query: q, sources };
         } catch {
           return { query: q, sources: [] };
@@ -697,14 +749,22 @@ searchNameEl.addEventListener('keydown', e => {
   if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleSearch();
 });
 
-// Candidate card click (delegated)
+// Candidate card click (delegated) — toggle: click to add, click again to remove
 candidateList.addEventListener('click', e => {
   const card = e.target.closest('.candidate-card');
-  if (!card || card.classList.contains('added')) return;
+  if (!card) return;
   const gi  = parseInt(card.dataset.gi, 10);
   const ci  = parseInt(card.dataset.ci, 10);
   const src = searchGroups[gi]?.sources[ci];
-  if (src) addFromCandidate(src);
+  if (!src) return;
+
+  if (card.classList.contains('added')) {
+    // Toggle off: find and remove from table
+    const idx = allPlayers.findIndex(p => String(p.utrProfileId) === String(src.id));
+    if (idx >= 0) removePlayer(idx);
+  } else {
+    addFromCandidate(src);
+  }
 });
 
 // Paste lookup
