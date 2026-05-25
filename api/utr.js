@@ -1,5 +1,7 @@
 // Proxy for UTR API calls — bypasses CORS restriction
-const UTR_BASE = 'https://app.universaltennis.com';
+// UTR migrated from universaltennis.com to utrsports.net; old domain returns 301 which
+// causes POST (login) to silently become GET and lose its body — use new domain directly.
+const UTR_BASE = 'https://app.utrsports.net';
 
 async function readBody(req) {
   if (req.body !== undefined) return req.body;
@@ -43,8 +45,8 @@ export default async function handler(req, res) {
         'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
       Accept: 'application/json, text/plain, */*',
       'Accept-Language': 'en-US,en;q=0.9',
-      Origin: 'https://app.universaltennis.com',
-      Referer: 'https://app.universaltennis.com/',
+      Origin: 'https://app.utrsports.net',
+      Referer: 'https://app.utrsports.net/',
     };
 
     const utrCookie = req.headers['x-utr-cookie'];

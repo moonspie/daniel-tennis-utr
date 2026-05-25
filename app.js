@@ -34,7 +34,6 @@ const authUserName  = document.getElementById('authUserName');
 const authPowerBadge = document.getElementById('authPowerBadge');
 const authExpiry    = document.getElementById('authExpiry');
 const logoutBtn     = document.getElementById('logoutBtn');
-const cookieToggle  = document.getElementById('cookieToggle');
 const cookieFallback = document.getElementById('cookieFallback');
 const utrCookieInput = document.getElementById('utrCookieInput');
 const cookieStatus  = document.getElementById('cookieStatus');
@@ -84,7 +83,7 @@ function jwtExpiryLabel(token) {
 
 // ─── Auth State ───────────────────────────────────────────────────────────────
 
-function setAuthConnected(jwt) {
+function setAuthConnected(jwt, meData) {
   utrJwt = jwt;
   localStorage.setItem(LS_JWT_KEY, jwt);
 
@@ -94,15 +93,21 @@ function setAuthConnected(jwt) {
   const email     = p?.email || '';
   const name      = [firstName, lastName].filter(Boolean).join(' ') || email || 'UTR User';
 
-  // Power detection — check common JWT claim names
-  const roles    = (p?.Roles || p?.roles || []);
-  const subType  = (p?.subscriptionType || p?.SubscriptionType || p?.membershipType || '').toLowerCase();
-  const isPower  = roles.includes('POWER') || roles.includes('Power') ||
-                   subType.includes('power') || subType === 'premium';
+  // Power detection: prefer /api/v1/me data, fall back to JWT claims
+  let isPower = false;
+  if (meData) {
+    isPower = meData.isPoweredBySubscription || meData.isPowered ||
+              (meData.subscription?.type || '').toLowerCase().includes('power');
+  } else {
+    const roles   = (p?.Roles || p?.roles || []);
+    const subType = (p?.subscriptionType || p?.SubscriptionType || p?.membershipType || '').toLowerCase();
+    isPower = roles.includes('POWER') || roles.includes('Power') ||
+              subType.includes('power') || subType === 'premium';
+  }
 
   authUserName.textContent = name;
-  authPowerBadge.textContent = isPower ? 'Power' : (subType || 'Member');
-  authPowerBadge.className = isPower ? 'badge-power' : 'badge-unknown';
+  authPowerBadge.textContent = isPower ? 'Power' : 'Member';
+  authPowerBadge.className = isPower ? 'badge-power' : 'badge-standard';
   authExpiry.textContent = jwtExpiryLabel(jwt);
 
   authLogin.style.display = 'none';
@@ -127,10 +132,24 @@ function loadStoredAuth() {
     localStorage.removeItem(LS_JWT_KEY);
     return;
   }
-  setAuthConnected(stored);
+  // Show basic info immediately, then enrich with /me in background
+  setAuthConnected(stored, null);
+  fetchMe(stored).then(me => { if (me) setAuthConnected(stored, me); }).catch(() => {});
 }
 
 // ─── UTR Login (email/password via proxy) ─────────────────────────────────────
+
+async function fetchMe(jwt) {
+  try {
+    const res = await fetch(`${UTR_PROXY}?path=/api/v1/me`, {
+      headers: { 'X-Utr-Cookie': `jwt=${jwt}` },
+    });
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
+}
 
 async function loginUTR(email, password) {
   const res = await fetch(`${UTR_PROXY}?path=/api/v1/auth/login`, {
@@ -140,10 +159,12 @@ async function loginUTR(email, password) {
   });
   const data = await res.json();
   if (!res.ok) {
-    throw new Error(data.message || data.error || `Login failed (${res.status})`);
+    // UTR error messages
+    const msg = data.Message || data.message || data.error || '';
+    throw new Error(msg || `Login failed (${res.status})`);
   }
   const jwt = data._jwt || data.jwt || data.token || data.accessToken || '';
-  if (!jwt) throw new Error('No token returned — email/password login may not be supported. Use the cookie fallback below.');
+  if (!jwt) throw new Error('Login succeeded but no token was returned. Try the cookie method instead.');
   return jwt;
 }
 
@@ -350,7 +371,7 @@ function renderTable(players) {
 
 function renderRow(p, rank) {
   const location = [p.city, p.state].filter(Boolean).join(', ');
-  const utrUrl   = p.utrProfileId ? `https://app.universaltennis.com/profiles/${p.utrProfileId}` : null;
+  const utrUrl   = p.utrProfileId ? `https://app.utrsports.net/profiles/${p.utrProfileId}` : null;
   const nameCell = utrUrl
     ? `<a href="${utrUrl}" target="_blank">${p.firstName} ${p.lastName}</a>`
     : `${p.firstName} ${p.lastName}`;
@@ -510,7 +531,11 @@ loginBtn.addEventListener('click', async () => {
   loginError.style.display = 'none';
   try {
     const jwt = await loginUTR(email, password);
-    setAuthConnected(jwt);
+    // Show basic info immediately
+    setAuthConnected(jwt, null);
+    // Enrich with /me for accurate Power status
+    const me = await fetchMe(jwt);
+    if (me) setAuthConnected(jwt, me);
   } catch (err) {
     loginError.textContent = err.message;
     loginError.style.display = 'inline';
@@ -526,12 +551,6 @@ loginPassword.addEventListener('keydown', e => {
 
 logoutBtn.addEventListener('click', setAuthDisconnected);
 
-// Cookie fallback toggle
-cookieToggle.addEventListener('click', () => {
-  const open = cookieFallback.style.display === 'block';
-  cookieFallback.style.display = open ? 'none' : 'block';
-});
-
 utrCookieInput.addEventListener('input', () => {
   const cookie = utrCookieInput.value.trim();
   if (!cookie) { cookieStatus.textContent = ''; return; }
@@ -541,25 +560,27 @@ utrCookieInput.addEventListener('input', () => {
     const jwt = jwtMatch[1];
     try {
       const p = JSON.parse(atob(jwt.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
-      cookieStatus.textContent = `Found JWT for ${p.email || 'unknown'} — click Apply to log in.`;
+      cookieStatus.textContent = `Found JWT for ${p.email || 'unknown'} — `;
       cookieStatus.style.color = '#2e7d32';
 
-      // Show an apply button
       let applyBtn = document.getElementById('cookieApplyBtn');
       if (!applyBtn) {
         applyBtn = document.createElement('button');
         applyBtn.id = 'cookieApplyBtn';
-        applyBtn.textContent = 'Apply';
-        applyBtn.style.cssText = 'margin-left:8px;padding:4px 10px;background:#0a2342;color:white;border:none;border-radius:4px;font-size:0.8rem;cursor:pointer';
+        applyBtn.textContent = 'Apply & Sign In';
+        applyBtn.style.cssText = 'margin-left:2px;padding:3px 10px;background:#0a2342;color:white;border:none;border-radius:4px;font-size:0.78rem;cursor:pointer';
         cookieStatus.after(applyBtn);
       }
-      applyBtn.onclick = () => setAuthConnected(jwt);
+      applyBtn.onclick = () => {
+        setAuthConnected(jwt, null);
+        fetchMe(jwt).then(me => { if (me) setAuthConnected(jwt, me); }).catch(() => {});
+      };
     } catch {
-      cookieStatus.textContent = 'Could not parse JWT. Check that you copied the full Cookie header.';
+      cookieStatus.textContent = 'Could not parse JWT. Check that you copied the full Cookie header value.';
       cookieStatus.style.color = '#c62828';
     }
   } else {
-    cookieStatus.textContent = 'No UTR JWT found in this cookie string.';
+    cookieStatus.textContent = 'No UTR JWT found. Make sure you copied the Cookie: header value (not the URL).';
     cookieStatus.style.color = '#c62828';
   }
 });
