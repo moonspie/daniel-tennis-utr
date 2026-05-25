@@ -281,7 +281,7 @@ async function searchUtrPlayer(firstName, lastName, city = '', state = '') {
 
 async function fetchUtrProfile(utrId) {
   try {
-    return await utrFetch(`/api/v1/player/${utrId}`);
+    return await utrFetch(`/api/v2/player/${utrId}`);
   } catch {
     return null;
   }
@@ -296,13 +296,14 @@ async function fetchUtrResults(utrId, year = CURRENT_YEAR) {
   }
 }
 
-// Apply UTR rating fields from any API source, preferring non-masked values
+// Apply UTR rating fields — only overrides when the new value is better (non-zero, non-masked)
 function applyUtrRating(player, src) {
   if (!src) return;
-  // Only override if the new source has a non-masked display value
   const isReal = v => v && !String(v).includes('.xx');
-  if (src.singlesUtr != null) player.singles = src.singlesUtr;
-  if (src.doublesUtr != null) player.doubles = src.doublesUtr;
+  // Only update numeric UTR if new value is non-zero (0 = masked by UTR server)
+  if (src.singlesUtr) player.singles = src.singlesUtr;
+  if (src.doublesUtr) player.doubles = src.doublesUtr;
+  // Only update display string if new value is unmasked (not "x.xx" pattern)
   if (isReal(src.singlesUtrDisplay)) player.singlesDisplay = src.singlesUtrDisplay;
   else if (src.singlesUtrDisplay && !player.singlesDisplay) player.singlesDisplay = src.singlesUtrDisplay;
   if (isReal(src.doublesUtrDisplay)) player.doublesDisplay = src.doublesUtrDisplay;
