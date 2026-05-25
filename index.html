@@ -213,6 +213,49 @@
       display: none;
     }
 
+    .tabs {
+      display: flex;
+      gap: 0;
+      margin-bottom: 14px;
+    }
+
+    .tab-btn {
+      padding: 8px 18px;
+      border: 1px solid #ccc;
+      background: #f5f5f5;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #555;
+      transition: all 0.15s;
+    }
+
+    .tab-btn:first-child { border-radius: 6px 0 0 6px; }
+    .tab-btn:last-child  { border-radius: 0 6px 6px 0; border-left: none; }
+
+    .tab-btn.active {
+      background: #0a2342;
+      color: white;
+      border-color: #0a2342;
+    }
+
+    #manualSection { display: none; }
+
+    #manualSection textarea {
+      width: 100%;
+      max-width: 700px;
+      height: 120px;
+      padding: 10px 14px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 0.88rem;
+      font-family: monospace;
+      resize: vertical;
+      outline: none;
+    }
+
+    #manualSection textarea:focus { border-color: #0a2342; }
+
     footer {
       text-align: center;
       padding: 24px;
@@ -229,13 +272,29 @@
 </header>
 
 <div class="input-section">
-  <div class="input-row">
-    <input id="urlInput" type="text"
-      placeholder="Paste USTA tournament URL — e.g. https://playtennis.usta.com/Competitions/.../Tournaments/overview/UUID"
-      autocomplete="off" spellcheck="false">
-    <button id="loadBtn">Load</button>
+  <div class="tabs">
+    <button class="tab-btn active" id="tabUrl">USTA URL</button>
+    <button class="tab-btn" id="tabManual">Paste Player Names</button>
   </div>
-  <p class="hint">Fetches the player list from USTA, then looks up each player's UTR rating and recent match history.</p>
+
+  <div id="urlSection">
+    <div class="input-row">
+      <input id="urlInput" type="text"
+        placeholder="https://playtennis.usta.com/Competitions/.../Tournaments/overview/UUID"
+        autocomplete="off" spellcheck="false">
+      <button id="loadBtn">Load</button>
+    </div>
+    <p class="hint">Works for publicly accessible USTA tournaments. Some club-level events require login — use the "Paste Player Names" tab instead.</p>
+  </div>
+
+  <div id="manualSection">
+    <p class="hint" style="margin-bottom:8px">Copy player names from the USTA Players page and paste here — one name per line (e.g. <em>John Smith</em>).</p>
+    <textarea id="namesInput" placeholder="John Smith&#10;Jane Doe&#10;Michael Chen&#10;..."></textarea>
+    <div style="margin-top:8px">
+      <button id="loadBtn2" style="padding:10px 22px;background:#0a2342;color:white;border:none;border-radius:6px;font-size:0.9rem;font-weight:600;cursor:pointer">Look Up UTR</button>
+    </div>
+  </div>
+
   <div class="progress-bar" id="progressBar">
     <div class="progress-fill" id="progressFill"></div>
   </div>

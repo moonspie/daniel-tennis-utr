@@ -14,6 +14,12 @@ let sortDir = 'desc';
 
 const urlInput = document.getElementById('urlInput');
 const loadBtn = document.getElementById('loadBtn');
+const loadBtn2 = document.getElementById('loadBtn2');
+const namesInput = document.getElementById('namesInput');
+const tabUrl = document.getElementById('tabUrl');
+const tabManual = document.getElementById('tabManual');
+const urlSection = document.getElementById('urlSection');
+const manualSection = document.getElementById('manualSection');
 const statusEl = document.getElementById('status');
 const titleEl = document.getElementById('tournamentTitle');
 const tableWrap = document.getElementById('tableWrap');
@@ -437,9 +443,89 @@ async function loadTournament() {
   }
 }
 
+// ─── Manual Mode ─────────────────────────────────────────────────────────────
+
+async function loadManual() {
+  const raw = namesInput.value.trim();
+  if (!raw) { showStatus('Please paste at least one player name.', 'error'); return; }
+
+  const names = raw.split('\n')
+    .map(l => l.trim())
+    .filter(Boolean)
+    .map(line => {
+      const parts = line.split(/\s+/);
+      return { firstName: parts.slice(0, -1).join(' ') || parts[0], lastName: parts.slice(-1)[0] || '' };
+    });
+
+  loadBtn2.disabled = true;
+  tableWrap.style.display = 'none';
+  emptyMsg.style.display = 'none';
+  titleEl.style.display = 'none';
+  clearStatus();
+  setProgress(5);
+
+  titleEl.textContent = `Manual lookup — ${names.length} players`;
+  titleEl.style.display = 'block';
+  showStatus(`Looking up ${names.length} players on UTR…`);
+  tableWrap.style.display = 'block';
+
+  allPlayers = names.map(n => ({ ...n, loading: true, singles: -1, doubles: -1 }));
+  renderTable(allPlayers);
+
+  const BATCH = 5;
+  let done = 0;
+
+  for (let i = 0; i < allPlayers.length; i += BATCH) {
+    const batch = allPlayers.slice(i, i + BATCH);
+    await Promise.all(batch.map(async (player) => {
+      try {
+        const utrPlayer = await searchUtrPlayer(player.firstName, player.lastName);
+        if (utrPlayer) {
+          player.utrProfileId = utrPlayer.id;
+          player.singles = utrPlayer.singlesUtr || 0;
+          player.doubles = utrPlayer.doublesUtr || 0;
+          player.singlesDisplay = utrPlayer.singlesUtrDisplay || '—';
+          player.doublesDisplay = utrPlayer.doublesUtrDisplay || '—';
+          player.singlesStatus = utrPlayer.ratingStatusSingles;
+          player.doublesStatus = utrPlayer.ratingStatusDoubles;
+          const results = await fetchUtrResults(utrPlayer.id);
+          if (results) {
+            player.wins = results.wins;
+            player.losses = results.losses;
+            player.matches = parseRecentMatches(results, utrPlayer.id);
+          }
+        }
+      } catch (err) {
+        console.warn(`UTR lookup failed for ${player.firstName} ${player.lastName}:`, err.message);
+      }
+      player.loading = false;
+      done++;
+      setProgress(5 + Math.round((done / allPlayers.length) * 93));
+    }));
+    renderTable(allPlayers);
+  }
+
+  setProgress(100);
+  const found = allPlayers.filter(p => p.utrProfileId).length;
+  showStatus(`Done. Found UTR profiles for ${found} of ${allPlayers.length} players.`, 'success');
+  setTimeout(() => setProgress(0), 800);
+  loadBtn2.disabled = false;
+}
+
 // ─── Event Listeners ──────────────────────────────────────────────────────────
 
+tabUrl.addEventListener('click', () => {
+  tabUrl.classList.add('active'); tabManual.classList.remove('active');
+  urlSection.style.display = ''; manualSection.style.display = 'none';
+});
+
+tabManual.addEventListener('click', () => {
+  tabManual.classList.add('active'); tabUrl.classList.remove('active');
+  manualSection.style.display = ''; urlSection.style.display = 'none';
+});
+
 loadBtn.addEventListener('click', loadTournament);
+loadBtn2.addEventListener('click', loadManual);
 
 urlInput.addEventListener('keydown', e => {
   if (e.key === 'Enter') loadTournament();
