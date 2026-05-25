@@ -6,10 +6,11 @@ const LS_JWT_KEY = 'utr_jwt';
 
 // ─── State ────────────────────────────────────────────────────────────────────
 
-let allPlayers = [];
+let allPlayers = [];       // Accumulated table rows (search adds, paste replaces)
 let sortCol = 'singles';
 let sortDir = 'desc';
-let utrJwt = '';  // Current JWT; empty = not authenticated
+let utrJwt = '';           // Current JWT; empty = not authenticated
+let lastSearchHits = [];   // Candidate cards for current search
 
 // ─── DOM refs ─────────────────────────────────────────────────────────────────
 
@@ -22,21 +23,36 @@ const tableBody     = document.getElementById('tableBody');
 const emptyMsg      = document.getElementById('emptyMsg');
 const progressBar   = document.getElementById('progressBar');
 const progressFill  = document.getElementById('progressFill');
+const tableControls = document.getElementById('tableControls');
+const tableCount    = document.getElementById('tableCountLabel');
+const clearTableBtn = document.getElementById('clearTableBtn');
 
 // Auth DOM
-const authLogin     = document.getElementById('authLogin');
-const authConnected = document.getElementById('authConnected');
-const loginEmail    = document.getElementById('loginEmail');
-const loginPassword = document.getElementById('loginPassword');
-const loginBtn      = document.getElementById('loginBtn');
-const loginError    = document.getElementById('loginError');
-const authUserName  = document.getElementById('authUserName');
+const authLogin      = document.getElementById('authLogin');
+const authConnected  = document.getElementById('authConnected');
+const loginEmail     = document.getElementById('loginEmail');
+const loginPassword  = document.getElementById('loginPassword');
+const loginBtn       = document.getElementById('loginBtn');
+const loginError     = document.getElementById('loginError');
+const authUserName   = document.getElementById('authUserName');
 const authPowerBadge = document.getElementById('authPowerBadge');
-const authExpiry    = document.getElementById('authExpiry');
-const logoutBtn     = document.getElementById('logoutBtn');
+const authExpiry     = document.getElementById('authExpiry');
+const logoutBtn      = document.getElementById('logoutBtn');
 const cookieFallback = document.getElementById('cookieFallback');
 const utrCookieInput = document.getElementById('utrCookieInput');
-const cookieStatus  = document.getElementById('cookieStatus');
+const cookieStatus   = document.getElementById('cookieStatus');
+
+// Search DOM
+const tabSearch      = document.getElementById('tabSearch');
+const tabPaste       = document.getElementById('tabPaste');
+const searchSection  = document.getElementById('searchSection');
+const pasteSection   = document.getElementById('pasteSection');
+const searchNameEl   = document.getElementById('searchName');
+const searchCityEl   = document.getElementById('searchCity');
+const searchBtn      = document.getElementById('searchBtn');
+const candidateArea  = document.getElementById('candidateArea');
+const candidateMsg   = document.getElementById('candidateMsg');
+const candidateList  = document.getElementById('candidateList');
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -73,9 +89,8 @@ function jwtExpiryLabel(token) {
   const p = parseJwt(token);
   if (!p?.exp) return '';
   const d = new Date(p.exp * 1000);
-  const now = new Date();
-  const days = Math.round((d - now) / 86400000);
-  if (days <= 0) return '(expired)';
+  const days = Math.round((d - Date.now()) / 86400000);
+  if (days <= 0)  return '(expired)';
   if (days === 1) return '(expires tomorrow)';
   if (days <= 14) return `(expires in ${days} days)`;
   return '';
@@ -93,7 +108,6 @@ function setAuthConnected(jwt, meData) {
   const email     = p?.email || '';
   const name      = [firstName, lastName].filter(Boolean).join(' ') || email || 'UTR User';
 
-  // Power detection: prefer /api/v1/me data, fall back to JWT claims
   let isPower = false;
   if (meData) {
     isPower = meData.isPoweredBySubscription || meData.isPowered ||
@@ -128,16 +142,12 @@ function setAuthDisconnected() {
 function loadStoredAuth() {
   const stored = localStorage.getItem(LS_JWT_KEY);
   if (!stored) return;
-  if (jwtExpired(stored)) {
-    localStorage.removeItem(LS_JWT_KEY);
-    return;
-  }
-  // Show basic info immediately, then enrich with /me in background
+  if (jwtExpired(stored)) { localStorage.removeItem(LS_JWT_KEY); return; }
   setAuthConnected(stored, null);
   fetchMe(stored).then(me => { if (me) setAuthConnected(stored, me); }).catch(() => {});
 }
 
-// ─── UTR Login (email/password via proxy) ─────────────────────────────────────
+// ─── UTR Auth API ─────────────────────────────────────────────────────────────
 
 async function fetchMe(jwt) {
   try {
@@ -146,9 +156,7 @@ async function fetchMe(jwt) {
     });
     if (!res.ok) return null;
     return res.json();
-  } catch {
-    return null;
-  }
+  } catch { return null; }
 }
 
 async function loginUTR(email, password) {
@@ -159,7 +167,6 @@ async function loginUTR(email, password) {
   });
   const data = await res.json();
   if (!res.ok) {
-    // UTR error messages
     const msg = data.Message || data.message || data.error || '';
     throw new Error(msg || `Login failed (${res.status})`);
   }
@@ -172,7 +179,6 @@ async function loginUTR(email, password) {
 
 function utrHeaders() {
   const h = {};
-  // Build cookie string from stored JWT
   if (utrJwt) h['X-Utr-Cookie'] = `jwt=${utrJwt}`;
   return h;
 }
@@ -237,6 +243,7 @@ function normCity(c) {
   return (c || '').toLowerCase().replace(/\s+/g, '');
 }
 
+// Returns the single best match (for bulk paste lookup)
 async function searchUtrPlayer(firstName, lastName, city = '', state = '') {
   const baseName = `${firstName} ${lastName}`.trim();
   const hits = ((await utrFetch('/api/v2/search/players', { query: baseName, top: 10 })).hits) || [];
@@ -253,9 +260,9 @@ async function searchUtrPlayer(firstName, lastName, city = '', state = '') {
     if (fullName === nameLower) score += 100;
 
     const locDisplay = src.location?.display || '';
-    const locParts = locDisplay.split(',');
-    const srcCity  = normCity(src.location?.city || locParts[0]);
-    const srcState = (src.location?.state || locParts[1] || '').toLowerCase().trim();
+    const locParts   = locDisplay.split(',');
+    const srcCity    = normCity(src.location?.city || src.location?.cityName || locParts[0]);
+    const srcState   = (src.location?.state || src.location?.stateName || locParts[1] || '').toLowerCase().trim();
 
     if (targetCity && srcCity  && srcCity  === targetCity)  score += 20;
     if (targetState && srcState && srcState === targetState) score += 10;
@@ -264,6 +271,12 @@ async function searchUtrPlayer(firstName, lastName, city = '', state = '') {
 
   scored.sort((a, b) => b.score - a.score);
   return scored[0]?.src || null;
+}
+
+// Returns top N candidates (for interactive search)
+async function searchUtrCandidates(name, city = '', state = '') {
+  const hits = ((await utrFetch('/api/v2/search/players', { query: name.trim(), top: 5 })).hits) || [];
+  return hits.map(h => h.source);
 }
 
 async function fetchUtrProfile(utrId) {
@@ -281,9 +294,9 @@ function applyUtrRating(player, src) {
   const isReal = v => v && !String(v).includes('.xx');
   if (src.singlesUtr)  player.singles  = src.singlesUtr;
   if (src.doublesUtr)  player.doubles  = src.doublesUtr;
-  if (isReal(src.singlesUtrDisplay)) player.singlesDisplay = src.singlesUtrDisplay;
+  if (isReal(src.singlesUtrDisplay))          player.singlesDisplay = src.singlesUtrDisplay;
   else if (src.singlesUtrDisplay && !player.singlesDisplay) player.singlesDisplay = src.singlesUtrDisplay;
-  if (isReal(src.doublesUtrDisplay)) player.doublesDisplay = src.doublesUtrDisplay;
+  if (isReal(src.doublesUtrDisplay))          player.doublesDisplay = src.doublesUtrDisplay;
   else if (src.doublesUtrDisplay && !player.doublesDisplay) player.doublesDisplay = src.doublesUtrDisplay;
   if (src.ratingStatusSingles) player.singlesStatus = src.ratingStatusSingles;
   if (src.ratingStatusDoubles) player.doublesStatus = src.ratingStatusDoubles;
@@ -320,11 +333,9 @@ function parseRecentMatches(resultsData, utrId, maxMatches = 5) {
         matches.push({
           won: isWinner,
           oppName:       opponent ? `${opponent.firstName} ${opponent.lastName}` : '?',
-          oppUtr:        opponent?.singlesUtr || 0,
           oppUtrDisplay: opponent?.singlesUtrDisplay || '--',
           score:         formatScore(score),
           date,
-          eventName:     event.name,
         });
       }
     }
@@ -332,6 +343,87 @@ function parseRecentMatches(resultsData, utrId, maxMatches = 5) {
 
   matches.sort((a, b) => new Date(b.date) - new Date(a.date));
   return matches.slice(0, maxMatches);
+}
+
+// ─── Candidate Cards ──────────────────────────────────────────────────────────
+
+function renderCandidates(sources) {
+  lastSearchHits = sources;
+  candidateArea.style.display = 'block';
+
+  if (!sources.length) {
+    candidateMsg.textContent = 'No players found. Try a different spelling or city.';
+    candidateList.innerHTML = '';
+    return;
+  }
+
+  const plural = sources.length > 1 ? `${sources.length} results` : '1 result';
+  candidateMsg.textContent = sources.length > 1
+    ? `${plural} — click the correct player to add to the table:`
+    : `${plural} found:`;
+
+  candidateList.innerHTML = sources.map((src, i) => {
+    const loc     = src.location?.display || '';
+    const ageRange = src.ageRange || '';
+    const utrHint = (src.threeMonthRating && src.threeMonthRating > 0)
+      ? `~${src.threeMonthRating.toFixed(1)}`
+      : (src.utrRange ? `${src.utrRange.minUtr}–${src.utrRange.maxUtr}` : '?');
+    const alreadyAdded = allPlayers.some(p => String(p.utrProfileId) === String(src.id));
+
+    return `<div class="candidate-card${alreadyAdded ? ' added' : ''}" data-idx="${i}">
+      <div class="c-name">${src.firstName} ${src.lastName}</div>
+      <div class="c-loc">${loc || 'Location unknown'}</div>
+      <div class="c-utr">UTR ${utrHint}<span class="c-age">${ageRange}</span></div>
+      <span class="c-add">${alreadyAdded ? 'Added' : '+ Add to table'}</span>
+    </div>`;
+  }).join('');
+}
+
+// ─── Add Player from Search ───────────────────────────────────────────────────
+
+async function addFromCandidate(src) {
+  // Ignore click if already added
+  if (allPlayers.some(p => String(p.utrProfileId) === String(src.id))) return;
+
+  const player = {
+    firstName:    src.firstName,
+    lastName:     src.lastName,
+    city:         src.location?.cityName || src.location?.display?.split(',')[0]?.trim() || '',
+    state:        src.location?.stateName || src.location?.display?.split(',')[1]?.trim() || '',
+    utrProfileId: src.id,
+    event:        src.ageRange || '',
+    loading:      true,
+    singles:      -1,
+    doubles:      -1,
+  };
+
+  // Apply whatever the search result already has (will be masked)
+  applyUtrRating(player, src);
+
+  allPlayers.push(player);
+  showTable();
+  renderTable(allPlayers);
+  // Refresh candidate cards to show "Added" state
+  renderCandidates(lastSearchHits);
+
+  try {
+    const [profile, results] = await Promise.all([
+      fetchUtrProfile(src.id),
+      fetchUtrResults(src.id),
+    ]);
+    applyUtrRating(player, profile);
+    if (results) {
+      player.wins    = results.wins;
+      player.losses  = results.losses;
+      player.matches = parseRecentMatches(results, src.id);
+      applyUtrRating(player, results);
+    }
+  } catch (err) {
+    console.warn(`UTR fetch failed for ${src.firstName} ${src.lastName}:`, err.message);
+  }
+
+  player.loading = false;
+  renderTable(allPlayers);
 }
 
 // ─── Table Rendering ──────────────────────────────────────────────────────────
@@ -342,22 +434,54 @@ function ratingBadge(status) {
   return `<span class="utr-badge badge-${cls}">${status}</span>`;
 }
 
+function showTable() {
+  tableWrap.style.display = 'block';
+  tableControls.style.display = 'flex';
+  emptyMsg.style.display = 'none';
+}
+
+function hideTable() {
+  tableWrap.style.display = 'none';
+  tableControls.style.display = 'none';
+}
+
+function updateTableCount() {
+  const n = allPlayers.length;
+  tableCount.textContent = `${n} player${n !== 1 ? 's' : ''} in table`;
+}
+
+function removePlayer(idx) {
+  allPlayers.splice(idx, 1);
+  if (!allPlayers.length) {
+    hideTable();
+    clearStatus();
+    titleEl.style.display = 'none';
+  } else {
+    renderTable(allPlayers);
+    // Refresh candidates to update "Added" state
+    if (lastSearchHits.length) renderCandidates(lastSearchHits);
+  }
+}
+
 function renderTable(players) {
-  const sorted = [...players].sort((a, b) => {
-    let va = a[sortCol] ?? -1;
-    let vb = b[sortCol] ?? -1;
-    if (sortCol === 'name') {
-      va = `${a.lastName} ${a.firstName}`.toLowerCase();
-      vb = `${b.lastName} ${b.firstName}`.toLowerCase();
-      return sortDir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
-    }
-    return sortDir === 'asc' ? va - vb : vb - va;
-  });
+  updateTableCount();
+
+  const sorted = [...players].map((p, origIdx) => ({ ...p, _origIdx: origIdx }))
+    .sort((a, b) => {
+      let va = a[sortCol] ?? -1;
+      let vb = b[sortCol] ?? -1;
+      if (sortCol === 'name') {
+        va = `${a.lastName} ${a.firstName}`.toLowerCase();
+        vb = `${b.lastName} ${b.firstName}`.toLowerCase();
+        return sortDir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
+      }
+      return sortDir === 'asc' ? va - vb : vb - va;
+    });
 
   tableBody.innerHTML = '';
   sorted.forEach((p, i) => {
     const tr = document.createElement('tr');
-    tr.innerHTML = renderRow(p, i + 1);
+    tr.innerHTML = renderRow(p, i + 1, p._origIdx);
     tableBody.appendChild(tr);
   });
 
@@ -369,7 +493,7 @@ function renderTable(players) {
   });
 }
 
-function renderRow(p, rank) {
+function renderRow(p, rank, origIdx) {
   const location = [p.city, p.state].filter(Boolean).join(', ');
   const utrUrl   = p.utrProfileId ? `https://app.utrsports.net/profiles/${p.utrProfileId}` : null;
   const nameCell = utrUrl
@@ -408,14 +532,15 @@ function renderRow(p, rank) {
     <td class="wl">${winsCell}</td>
     <td class="wl">${lossesCell}</td>
     <td class="matches">${matchesCell}</td>
+    <td class="remove-col"><button class="remove-btn" data-orig="${origIdx}" title="Remove">x</button></td>
   `;
 }
 
-// ─── Main Lookup Flow ─────────────────────────────────────────────────────────
+// ─── Bulk Paste Lookup Flow ───────────────────────────────────────────────────
 
 async function runLookup(names) {
   lookupBtn.disabled = true;
-  tableWrap.style.display = 'none';
+  hideTable();
   emptyMsg.style.display = 'none';
   titleEl.style.display = 'none';
   clearStatus();
@@ -424,8 +549,9 @@ async function runLookup(names) {
   titleEl.textContent = `Lookup — ${names.length} player${names.length !== 1 ? 's' : ''}`;
   titleEl.style.display = 'block';
   showStatus(`Looking up ${names.length} players on UTR...`);
-  tableWrap.style.display = 'block';
+  showTable();
 
+  // Paste mode replaces current table
   allPlayers = names.map(n => ({ ...n, loading: true, singles: -1, doubles: -1 }));
   renderTable(allPlayers);
 
@@ -440,13 +566,11 @@ async function runLookup(names) {
         if (utrPlayer) {
           player.utrProfileId = utrPlayer.id;
           applyUtrRating(player, utrPlayer);
-
           const [profile, results] = await Promise.all([
             fetchUtrProfile(utrPlayer.id),
             fetchUtrResults(utrPlayer.id),
           ]);
           applyUtrRating(player, profile);
-
           if (results) {
             player.wins    = results.wins;
             player.losses  = results.losses;
@@ -497,13 +621,67 @@ async function handleLookup() {
   await runLookup(names);
 }
 
+// ─── Single Name Search ───────────────────────────────────────────────────────
+
+async function handleSearch() {
+  const name = searchNameEl.value.trim();
+  if (!name) return;
+
+  searchBtn.disabled = true;
+  searchBtn.textContent = 'Searching...';
+  candidateArea.style.display = 'none';
+
+  try {
+    const city = searchCityEl.value.trim();
+    const sources = await searchUtrCandidates(name, city);
+    renderCandidates(sources);
+  } catch (err) {
+    candidateArea.style.display = 'block';
+    candidateMsg.textContent = `Search failed: ${err.message}`;
+    candidateList.innerHTML = '';
+  } finally {
+    searchBtn.disabled = false;
+    searchBtn.textContent = 'Search';
+  }
+}
+
 // ─── Event Listeners ──────────────────────────────────────────────────────────
 
+// Tab switching
+tabSearch.addEventListener('click', () => {
+  tabSearch.classList.add('active');
+  tabPaste.classList.remove('active');
+  searchSection.style.display = 'block';
+  pasteSection.style.display = 'none';
+});
+
+tabPaste.addEventListener('click', () => {
+  tabPaste.classList.add('active');
+  tabSearch.classList.remove('active');
+  pasteSection.style.display = 'block';
+  searchSection.style.display = 'none';
+});
+
+// Search
+searchBtn.addEventListener('click', handleSearch);
+searchNameEl.addEventListener('keydown', e => { if (e.key === 'Enter') handleSearch(); });
+searchCityEl.addEventListener('keydown', e => { if (e.key === 'Enter') handleSearch(); });
+
+// Candidate card click (delegated)
+candidateList.addEventListener('click', e => {
+  const card = e.target.closest('.candidate-card');
+  if (!card || card.classList.contains('added')) return;
+  const idx = parseInt(card.dataset.idx, 10);
+  if (lastSearchHits[idx]) addFromCandidate(lastSearchHits[idx]);
+});
+
+// Paste lookup
 lookupBtn.addEventListener('click', handleLookup);
 namesInput.addEventListener('keydown', e => {
   if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleLookup();
 });
 
+// Sort
 document.querySelectorAll('thead th[data-col]').forEach(th => {
   th.addEventListener('click', () => {
     const col = th.dataset.col;
@@ -517,7 +695,25 @@ document.querySelectorAll('thead th[data-col]').forEach(th => {
   });
 });
 
-// Login form
+// Remove row (delegated)
+tableBody.addEventListener('click', e => {
+  const btn = e.target.closest('.remove-btn');
+  if (!btn) return;
+  const origIdx = parseInt(btn.dataset.orig, 10);
+  removePlayer(origIdx);
+});
+
+// Clear table
+clearTableBtn.addEventListener('click', () => {
+  allPlayers = [];
+  lastSearchHits = [];
+  hideTable();
+  clearStatus();
+  titleEl.style.display = 'none';
+  candidateArea.style.display = 'none';
+});
+
+// Login
 loginBtn.addEventListener('click', async () => {
   const email    = loginEmail.value.trim();
   const password = loginPassword.value;
@@ -531,9 +727,7 @@ loginBtn.addEventListener('click', async () => {
   loginError.style.display = 'none';
   try {
     const jwt = await loginUTR(email, password);
-    // Show basic info immediately
     setAuthConnected(jwt, null);
-    // Enrich with /me for accurate Power status
     const me = await fetchMe(jwt);
     if (me) setAuthConnected(jwt, me);
   } catch (err) {
@@ -545,12 +739,10 @@ loginBtn.addEventListener('click', async () => {
   }
 });
 
-loginPassword.addEventListener('keydown', e => {
-  if (e.key === 'Enter') loginBtn.click();
-});
-
+loginPassword.addEventListener('keydown', e => { if (e.key === 'Enter') loginBtn.click(); });
 logoutBtn.addEventListener('click', setAuthDisconnected);
 
+// Cookie fallback
 utrCookieInput.addEventListener('input', () => {
   const cookie = utrCookieInput.value.trim();
   if (!cookie) { cookieStatus.textContent = ''; return; }
@@ -562,7 +754,6 @@ utrCookieInput.addEventListener('input', () => {
       const p = JSON.parse(atob(jwt.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
       cookieStatus.textContent = `Found JWT for ${p.email || 'unknown'} — `;
       cookieStatus.style.color = '#2e7d32';
-
       let applyBtn = document.getElementById('cookieApplyBtn');
       if (!applyBtn) {
         applyBtn = document.createElement('button');

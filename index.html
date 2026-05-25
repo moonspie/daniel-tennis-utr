@@ -42,20 +42,6 @@
       padding: 14px 24px;
     }
 
-    #authLogin {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-
-    #authLogin label {
-      font-size: 0.85rem;
-      font-weight: 600;
-      color: #444;
-      white-space: nowrap;
-    }
-
     #authLogin input[type="email"],
     #authLogin input[type="password"] {
       padding: 8px 12px;
@@ -85,19 +71,7 @@
     #loginBtn:hover { background: #1a3a5c; }
     #loginBtn:disabled { background: #888; cursor: not-allowed; }
 
-    #loginError {
-      font-size: 0.8rem;
-      color: #c62828;
-      display: none;
-    }
-
-    #cookieToggle {
-      font-size: 0.78rem;
-      color: #888;
-      cursor: pointer;
-      text-decoration: underline;
-      white-space: nowrap;
-    }
+    #loginError { font-size: 0.8rem; color: #c62828; display: none; }
 
     #cookieFallback {
       margin-top: 10px;
@@ -132,18 +106,13 @@
     }
 
     .auth-dot {
-      width: 8px;
-      height: 8px;
+      width: 8px; height: 8px;
       background: #2e7d32;
       border-radius: 50%;
       flex-shrink: 0;
     }
 
-    #authUserName {
-      font-size: 0.88rem;
-      font-weight: 600;
-      color: #1a1a2e;
-    }
+    #authUserName  { font-size: 0.88rem; font-weight: 600; color: #1a1a2e; }
 
     #authPowerBadge {
       font-size: 0.7rem;
@@ -153,14 +122,11 @@
       text-transform: uppercase;
     }
 
-    .badge-power { background: #e8f5e9; color: #2e7d32; }
+    .badge-power    { background: #e8f5e9; color: #2e7d32; }
     .badge-standard { background: #f5f5f5; color: #757575; }
-    .badge-unknown { background: #e3f2fd; color: #1565c0; }
+    .badge-unknown  { background: #e3f2fd; color: #1565c0; }
 
-    #authExpiry {
-      font-size: 0.75rem;
-      color: #aaa;
-    }
+    #authExpiry { font-size: 0.75rem; color: #aaa; }
 
     #logoutBtn {
       font-size: 0.8rem;
@@ -182,12 +148,27 @@
       padding: 20px 24px;
     }
 
-    .input-section h2 {
-      font-size: 0.88rem;
-      font-weight: 600;
-      color: #444;
-      margin-bottom: 6px;
+    /* Mode tabs */
+    .mode-tabs {
+      display: flex;
+      margin-bottom: 16px;
     }
+
+    .mode-tab {
+      padding: 8px 18px;
+      border: 1px solid #ccc;
+      background: #f5f5f5;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #555;
+      transition: all 0.15s;
+      user-select: none;
+    }
+
+    .mode-tab:first-child { border-radius: 6px 0 0 6px; }
+    .mode-tab:last-child  { border-radius: 0 6px 6px 0; border-left: none; }
+    .mode-tab.active { background: #0a2342; color: white; border-color: #0a2342; }
 
     .hint {
       font-size: 0.78rem;
@@ -196,6 +177,120 @@
       line-height: 1.6;
     }
 
+    /* ── Search section ── */
+    .search-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      max-width: 700px;
+    }
+
+    .search-row input[type="text"] {
+      padding: 10px 14px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 0.88rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .search-row input[type="text"]:focus { border-color: #0a2342; }
+
+    #searchName { flex: 1; min-width: 180px; }
+    #searchCity { width: 140px; }
+
+    #searchBtn {
+      padding: 10px 22px;
+      background: #0a2342;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.2s;
+    }
+
+    #searchBtn:hover { background: #1a3a5c; }
+    #searchBtn:disabled { background: #888; cursor: not-allowed; }
+
+    /* Candidate cards */
+    #candidateArea {
+      display: none;
+      margin-top: 14px;
+    }
+
+    #candidateMsg {
+      font-size: 0.82rem;
+      color: #666;
+      margin-bottom: 10px;
+    }
+
+    .candidate-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .candidate-card {
+      background: white;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 11px 13px;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+      width: 172px;
+    }
+
+    @media (max-width: 500px) {
+      .candidate-card { width: 100%; }
+    }
+
+    .candidate-card:hover { border-color: #0a2342; background: #f5f8ff; }
+
+    .candidate-card.added {
+      border-color: #2e7d32;
+      background: #f1f8f1;
+      cursor: default;
+      opacity: 0.85;
+    }
+
+    .c-name { font-weight: 600; font-size: 0.88rem; color: #0a2342; line-height: 1.3; }
+    .c-loc  { font-size: 0.76rem; color: #666; margin-top: 3px; }
+    .c-utr  { font-size: 0.84rem; font-weight: 700; color: #333; margin-top: 5px; }
+    .c-age  { font-size: 0.7rem; color: #888; font-weight: 400; margin-left: 4px; }
+    .c-add  { display: block; margin-top: 6px; font-size: 0.75rem; font-weight: 600; color: #1565c0; }
+    .candidate-card.added .c-add { color: #2e7d32; }
+
+    /* Table controls */
+    #tableControls {
+      display: none;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    #tableControls span {
+      font-size: 0.88rem;
+      color: #555;
+      font-weight: 600;
+    }
+
+    #clearTableBtn {
+      font-size: 0.78rem;
+      color: #c62828;
+      background: none;
+      border: 1px solid #e0e0e0;
+      border-radius: 4px;
+      padding: 4px 10px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    #clearTableBtn:hover { background: #ffebee; }
+
+    /* ── Paste section ── */
     #namesInput {
       width: 100%;
       max-width: 700px;
@@ -228,6 +323,7 @@
     #lookupBtn:hover { background: #1a3a5c; }
     #lookupBtn:disabled { background: #888; cursor: not-allowed; }
 
+    /* Progress bar */
     .progress-bar {
       height: 4px;
       background: #e0e0e0;
@@ -263,9 +359,9 @@
     #status.success { background: #e8f5e9; color: #2e7d32; display: block; }
 
     #tournamentTitle {
-      font-size: 1.1rem;
+      font-size: 1.05rem;
       font-weight: 600;
-      margin-bottom: 16px;
+      margin-bottom: 12px;
       color: #0a2342;
       display: none;
     }
@@ -295,14 +391,16 @@
     thead th:hover { background: #1a3a5c; }
     thead th.sorted-asc::after  { content: ' ^'; }
     thead th.sorted-desc::after { content: ' v'; }
+    thead th.no-sort { cursor: default; }
+    thead th.no-sort:hover { background: #0a2342; }
 
     tbody tr { border-bottom: 1px solid #f0f0f0; transition: background 0.1s; }
     tbody tr:hover { background: #fafbff; }
     tbody tr:last-child { border-bottom: none; }
 
     td { padding: 11px 14px; vertical-align: top; }
-    td.rank { color: #888; font-size: 0.8rem; width: 36px; text-align: center; }
-    td.name { font-weight: 600; }
+    td.rank  { color: #888; font-size: 0.8rem; width: 36px; text-align: center; }
+    td.name  { font-weight: 600; }
     td.name a { color: #0a2342; text-decoration: none; }
     td.name a:hover { text-decoration: underline; }
     td.name .location { color: #888; font-size: 0.76rem; font-weight: 400; margin-top: 1px; }
@@ -351,6 +449,19 @@
     .loading-cell { color: #aaa; font-style: italic; }
     .no-utr { color: #bbb; font-style: italic; font-size: 0.82rem; }
 
+    td.remove-col { width: 28px; padding: 0 8px; }
+    .remove-btn {
+      background: none;
+      border: none;
+      color: #ccc;
+      font-size: 1rem;
+      cursor: pointer;
+      line-height: 1;
+      padding: 2px;
+      transition: color 0.15s;
+    }
+    .remove-btn:hover { color: #c62828; }
+
     #emptyMsg {
       text-align: center;
       color: #aaa;
@@ -376,7 +487,6 @@
 
 <!-- Auth bar -->
 <div id="authBar">
-  <!-- Login form -->
   <div id="authLogin">
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">
       <label style="font-size:0.85rem;font-weight:600;color:#444;white-space:nowrap">UTR Login:</label>
@@ -386,24 +496,22 @@
       <span id="loginError"></span>
     </div>
 
-    <!-- Cookie fallback — always visible as alternative -->
     <div id="cookieFallback">
       <p style="font-weight:600;margin-bottom:4px;color:#666">Alternative: paste a UTR session cookie (if login above doesn't work)</p>
       <p>
         <strong>On desktop Chrome/Safari:</strong> log in at <strong>app.utrsports.net</strong>, open DevTools
-        (F12 / Cmd+Option+I) &rarr; Network tab &rarr; reload the page &rarr; filter by <code>search/players</code>
-        &rarr; click that request &rarr; Request Headers &rarr; copy the entire value next to <code>Cookie:</code>
+        (F12 / Cmd+Option+I) &rarr; Network tab &rarr; reload &rarr; filter by <code>search/players</code>
+        &rarr; click that request &rarr; Request Headers &rarr; copy the full value next to <code>Cookie:</code>
       </p>
       <p style="margin-top:4px">
-        <strong>On iPhone/iPad (no DevTools):</strong> do the above on a Mac first, copy the cookie string,
-        then paste it here in mobile Safari. The cookie is saved and will work for ~30 days without repeating this.
+        <strong>On iPhone/iPad:</strong> do the above on a Mac first, copy the cookie string, paste it here in mobile Safari.
+        The cookie saves and works for ~30 days.
       </p>
       <input id="utrCookieInput" type="password" placeholder="Paste Cookie header value here...">
       <span id="cookieStatus"></span>
     </div>
   </div>
 
-  <!-- Connected state -->
   <div id="authConnected">
     <div class="auth-dot"></div>
     <span id="authUserName"></span>
@@ -413,14 +521,34 @@
   </div>
 </div>
 
-<!-- Paste input -->
+<!-- Input section -->
 <div class="input-section">
-  <h2>Paste Player Names</h2>
-  <p class="hint">
-    <strong>Option A:</strong> On the USTA Players page, select all (Cmd+A) and copy — paste the entire page here. Names, age groups, and locations are extracted automatically.<br>
-    <strong>Option B:</strong> One name per line (e.g. <em>John Smith</em>).
-  </p>
-  <textarea id="namesInput" placeholder="Paste full USTA Players page content, or one name per line:
+  <div class="mode-tabs">
+    <div class="mode-tab active" id="tabSearch">Search by Name</div>
+    <div class="mode-tab" id="tabPaste">Paste Player List</div>
+  </div>
+
+  <!-- Search mode -->
+  <div id="searchSection">
+    <p class="hint">Type a player name to search UTR. If multiple results appear, click the correct player to add them to the table.</p>
+    <div class="search-row">
+      <input type="text" id="searchName" placeholder="Player name (e.g. Oliver Lu)" autocomplete="off" spellcheck="false">
+      <input type="text" id="searchCity" placeholder="City (optional)" autocomplete="off" spellcheck="false">
+      <button id="searchBtn">Search</button>
+    </div>
+    <div id="candidateArea">
+      <div id="candidateMsg"></div>
+      <div class="candidate-list" id="candidateList"></div>
+    </div>
+  </div>
+
+  <!-- Paste mode -->
+  <div id="pasteSection" style="display:none">
+    <p class="hint">
+      <strong>Option A:</strong> On the USTA Players page, select all (Cmd+A) and copy — paste the entire page here. Names, age groups, and locations are extracted automatically.<br>
+      <strong>Option B:</strong> One name per line (e.g. <em>John Smith</em>).
+    </p>
+    <textarea id="namesInput" placeholder="Paste full USTA Players page content, or one name per line:
 
 BELL, Thomaz    Boys' 12 &amp; under Singles    San Juan, PR    M
 BERMUDEZ, Vicente    Boys' 16 &amp; under Singles    Arlington, VA    M
@@ -429,7 +557,8 @@ BERMUDEZ, Vicente    Boys' 16 &amp; under Singles    Arlington, VA    M
 
 John Smith
 Jane Doe"></textarea>
-  <button id="lookupBtn">Look Up UTR</button>
+    <button id="lookupBtn">Look Up All</button>
+  </div>
 
   <div class="progress-bar" id="progressBar">
     <div class="progress-fill" id="progressFill"></div>
@@ -439,17 +568,24 @@ Jane Doe"></textarea>
 <div class="main">
   <div id="status"></div>
   <div id="tournamentTitle"></div>
+
+  <div id="tableControls">
+    <span id="tableCountLabel"></span>
+    <button id="clearTableBtn">Clear table</button>
+  </div>
+
   <div class="table-wrap" id="tableWrap" style="display:none">
     <table id="playerTable">
       <thead>
         <tr>
-          <th class="rank">#</th>
+          <th class="rank no-sort">#</th>
           <th data-col="name">Player</th>
           <th data-col="singles" class="sorted-desc">UTR Singles</th>
           <th data-col="doubles">UTR Doubles</th>
           <th data-col="wins">Wins</th>
           <th data-col="losses">Losses</th>
-          <th>Recent Matches (Singles)</th>
+          <th class="no-sort">Recent Matches (Singles)</th>
+          <th class="no-sort remove-col"></th>
         </tr>
       </thead>
       <tbody id="tableBody"></tbody>
