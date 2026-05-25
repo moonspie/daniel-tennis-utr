@@ -329,6 +329,24 @@
     </ol>
   </div>
 
+  <details style="margin-top:12px; max-width:780px">
+    <summary style="cursor:pointer; font-size:0.82rem; font-weight:600; color:#666; user-select:none; list-style:none; display:flex; align-items:center; gap:6px">
+      <span style="font-size:0.75rem">&#9654;</span> UTR login (optional &mdash; needed for real scores instead of 0.xx)
+    </summary>
+    <div style="margin-top:8px; padding:12px 14px; background:#fff8e1; border:1px solid #ffe082; border-radius:6px; font-size:0.8rem; color:#555; line-height:1.7">
+      <ol style="padding-left:18px; margin-bottom:10px">
+        <li>Open <strong>app.universaltennis.com</strong> in Chrome and log in</li>
+        <li>Open DevTools (<kbd>F12</kbd> or <kbd>Cmd+Option+I</kbd>) &rarr; <strong>Network</strong> tab</li>
+        <li>Reload the UTR page, then filter requests by <code>search/players</code></li>
+        <li>Click that request &rarr; <strong>Request Headers</strong> &rarr; copy the value next to <code>Cookie:</code></li>
+        <li>Paste it below</li>
+      </ol>
+      <input id="utrCookieInput" type="password" placeholder="Paste UTR Cookie header value here..."
+             style="width:100%; padding:8px 10px; border:1px solid #ccc; border-radius:4px; font-size:0.8rem; font-family:monospace; background:white">
+      <span id="utrCookieStatus" style="font-size:0.78rem; margin-top:4px; display:block"></span>
+    </div>
+  </details>
+
   <div class="progress-bar" id="progressBar">
     <div class="progress-fill" id="progressFill"></div>
   </div>

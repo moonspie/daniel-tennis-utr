@@ -9,6 +9,7 @@ const CURRENT_YEAR = new Date().getFullYear();
 let allPlayers = [];
 let sortCol = 'singles';
 let sortDir = 'desc';
+let utrCookie = '';
 
 // ─── DOM refs ─────────────────────────────────────────────────────────────────
 
@@ -238,7 +239,9 @@ function extractPlayers(participants) {
 
 async function utrFetch(path, params = {}) {
   const qs = new URLSearchParams({ path, ...params }).toString();
-  const res = await fetch(`${UTR_PROXY}?${qs}`);
+  const headers = {};
+  if (utrCookie) headers['X-Utr-Cookie'] = utrCookie;
+  const res = await fetch(`${UTR_PROXY}?${qs}`, { headers });
   if (!res.ok) throw new Error(`UTR API error: ${res.status}`);
   return res.json();
 }
@@ -686,6 +689,17 @@ document.querySelectorAll('thead th[data-col]').forEach(th => {
     }
     renderTable(allPlayers);
   });
+});
+
+// ─── UTR Cookie ───────────────────────────────────────────────────────────────
+
+const cookieInput = document.getElementById('utrCookieInput');
+const cookieStatus = document.getElementById('utrCookieStatus');
+
+cookieInput?.addEventListener('input', () => {
+  utrCookie = cookieInput.value.trim();
+  cookieStatus.textContent = utrCookie ? 'Cookie saved — will use for next lookup.' : '';
+  cookieStatus.style.color = utrCookie ? '#2e7d32' : '#888';
 });
 
 // ─── Init ─────────────────────────────────────────────────────────────────────

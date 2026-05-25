@@ -4,7 +4,7 @@ const UTR_BASE = 'https://app.universaltennis.com';
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Utr-Cookie');
 
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
@@ -28,12 +28,15 @@ export default async function handler(req, res) {
   const url = `${UTR_BASE}${path}${qs ? '?' + qs : ''}`;
 
   try {
-    const upstream = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; tennis-utr-lookup)',
-        'Accept': 'application/json',
-      }
-    });
+    const reqHeaders = {
+      'User-Agent': 'Mozilla/5.0 (compatible; tennis-utr-lookup)',
+      'Accept': 'application/json',
+    };
+    // Forward UTR session cookie if provided by the client
+    const utrCookie = req.headers['x-utr-cookie'];
+    if (utrCookie) reqHeaders['Cookie'] = utrCookie;
+
+    const upstream = await fetch(url, { headers: reqHeaders });
 
     const contentType = upstream.headers.get('content-type') || 'application/json';
     res.setHeader('Content-Type', contentType);
