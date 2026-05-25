@@ -6,11 +6,11 @@ const LS_JWT_KEY = 'utr_jwt';
 
 // ─── State ────────────────────────────────────────────────────────────────────
 
-let allPlayers = [];       // Accumulated table rows (search adds, paste replaces)
+let allPlayers = [];    // Accumulated table rows (search adds, paste replaces)
 let sortCol = 'singles';
 let sortDir = 'desc';
-let utrJwt = '';           // Current JWT; empty = not authenticated
-let lastSearchHits = [];   // Candidate cards for current search
+let utrJwt = '';        // Current JWT; empty = not authenticated
+let searchGroups = [];  // [{ query, sources[] }] — current candidate groups
 
 // ─── DOM refs ─────────────────────────────────────────────────────────────────
 
@@ -48,7 +48,6 @@ const tabPaste       = document.getElementById('tabPaste');
 const searchSection  = document.getElementById('searchSection');
 const pasteSection   = document.getElementById('pasteSection');
 const searchNameEl   = document.getElementById('searchName');
-const searchCityEl   = document.getElementById('searchCity');
 const searchBtn      = document.getElementById('searchBtn');
 const candidateArea  = document.getElementById('candidateArea');
 const candidateMsg   = document.getElementById('candidateMsg');
@@ -347,34 +346,51 @@ function parseRecentMatches(resultsData, utrId, maxMatches = 5) {
 
 // ─── Candidate Cards ──────────────────────────────────────────────────────────
 
-function renderCandidates(sources) {
-  lastSearchHits = sources;
+function candidateCardHtml(src, gi, ci) {
+  const loc      = src.location?.display || '';
+  const ageRange = src.ageRange || '';
+  const utrHint  = (src.threeMonthRating && src.threeMonthRating > 0)
+    ? `~${src.threeMonthRating.toFixed(1)}`
+    : (src.utrRange ? `${src.utrRange.minUtr}–${src.utrRange.maxUtr}` : '?');
+  const added = allPlayers.some(p => String(p.utrProfileId) === String(src.id));
+  return `<div class="candidate-card${added ? ' added' : ''}" data-gi="${gi}" data-ci="${ci}">
+    <div class="c-name">${src.firstName} ${src.lastName}</div>
+    <div class="c-loc">${loc || 'Unknown location'}</div>
+    <div class="c-utr">UTR ${utrHint}<span class="c-age"> ${ageRange}</span></div>
+    <span class="c-add">${added ? 'Added' : '+ Add'}</span>
+  </div>`;
+}
+
+function renderSearchGroups(groups) {
+  searchGroups = groups;
   candidateArea.style.display = 'block';
 
-  if (!sources.length) {
-    candidateMsg.textContent = 'No players found. Try a different spelling or city.';
+  const hasAny = groups.some(g => g.sources.length > 0);
+  if (!hasAny) {
+    candidateMsg.textContent = 'No players found. Try a different spelling.';
     candidateList.innerHTML = '';
     return;
   }
 
-  const plural = sources.length > 1 ? `${sources.length} results` : '1 result';
-  candidateMsg.textContent = sources.length > 1
-    ? `${plural} — click the correct player to add to the table:`
-    : `${plural} found:`;
+  candidateMsg.textContent = groups.length === 1
+    ? 'Click the correct player to add to the table:'
+    : `Results for ${groups.length} names — click each correct player to add:`;
 
-  candidateList.innerHTML = sources.map((src, i) => {
-    const loc     = src.location?.display || '';
-    const ageRange = src.ageRange || '';
-    const utrHint = (src.threeMonthRating && src.threeMonthRating > 0)
-      ? `~${src.threeMonthRating.toFixed(1)}`
-      : (src.utrRange ? `${src.utrRange.minUtr}–${src.utrRange.maxUtr}` : '?');
-    const alreadyAdded = allPlayers.some(p => String(p.utrProfileId) === String(src.id));
+  candidateList.innerHTML = groups.map((group, gi) => {
+    const cards = group.sources.map((src, ci) => candidateCardHtml(src, gi, ci)).join('');
 
-    return `<div class="candidate-card${alreadyAdded ? ' added' : ''}" data-idx="${i}">
-      <div class="c-name">${src.firstName} ${src.lastName}</div>
-      <div class="c-loc">${loc || 'Location unknown'}</div>
-      <div class="c-utr">UTR ${utrHint}<span class="c-age">${ageRange}</span></div>
-      <span class="c-add">${alreadyAdded ? 'Added' : '+ Add to table'}</span>
+    if (groups.length === 1) {
+      // Single query: no group label needed
+      return `<div class="group-cards">${cards}</div>`;
+    }
+
+    const countTag = group.sources.length === 0
+      ? '<span class="g-none">no results</span>'
+      : `<span class="g-count">${group.sources.length} result${group.sources.length > 1 ? 's' : ''}</span>`;
+
+    return `<div class="search-group">
+      <div class="group-label"><span class="g-query">${group.query}</span>${countTag}</div>
+      <div class="group-cards">${cards}</div>
     </div>`;
   }).join('');
 }
@@ -403,8 +419,8 @@ async function addFromCandidate(src) {
   allPlayers.push(player);
   showTable();
   renderTable(allPlayers);
-  // Refresh candidate cards to show "Added" state
-  renderCandidates(lastSearchHits);
+  // Refresh cards to show "Added" state
+  if (searchGroups.length) renderSearchGroups(searchGroups);
 
   try {
     const [profile, results] = await Promise.all([
@@ -424,6 +440,7 @@ async function addFromCandidate(src) {
 
   player.loading = false;
   renderTable(allPlayers);
+  if (searchGroups.length) renderSearchGroups(searchGroups);
 }
 
 // ─── Table Rendering ──────────────────────────────────────────────────────────
@@ -458,8 +475,7 @@ function removePlayer(idx) {
     titleEl.style.display = 'none';
   } else {
     renderTable(allPlayers);
-    // Refresh candidates to update "Added" state
-    if (lastSearchHits.length) renderCandidates(lastSearchHits);
+    if (searchGroups.length) renderSearchGroups(searchGroups);
   }
 }
 
@@ -621,20 +637,32 @@ async function handleLookup() {
   await runLookup(names);
 }
 
-// ─── Single Name Search ───────────────────────────────────────────────────────
+// ─── Name Search ─────────────────────────────────────────────────────────────
 
 async function handleSearch() {
-  const name = searchNameEl.value.trim();
-  if (!name) return;
+  const raw = searchNameEl.value.trim();
+  if (!raw) return;
+
+  // Split into lines; each line is one query (name, or "Name City" for better matching)
+  const queries = raw.split('\n').map(l => l.trim()).filter(Boolean);
 
   searchBtn.disabled = true;
-  searchBtn.textContent = 'Searching...';
+  searchBtn.textContent = queries.length > 1 ? `Searching ${queries.length}...` : 'Searching...';
   candidateArea.style.display = 'none';
 
   try {
-    const city = searchCityEl.value.trim();
-    const sources = await searchUtrCandidates(name, city);
-    renderCandidates(sources);
+    // Run all queries in parallel
+    const groups = await Promise.all(
+      queries.map(async (q) => {
+        try {
+          const sources = await searchUtrCandidates(q);
+          return { query: q, sources };
+        } catch {
+          return { query: q, sources: [] };
+        }
+      })
+    );
+    renderSearchGroups(groups);
   } catch (err) {
     candidateArea.style.display = 'block';
     candidateMsg.textContent = `Search failed: ${err.message}`;
@@ -664,15 +692,19 @@ tabPaste.addEventListener('click', () => {
 
 // Search
 searchBtn.addEventListener('click', handleSearch);
-searchNameEl.addEventListener('keydown', e => { if (e.key === 'Enter') handleSearch(); });
-searchCityEl.addEventListener('keydown', e => { if (e.key === 'Enter') handleSearch(); });
+// Ctrl/Cmd+Enter triggers search from textarea (Enter = newline for multi-line)
+searchNameEl.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleSearch();
+});
 
 // Candidate card click (delegated)
 candidateList.addEventListener('click', e => {
   const card = e.target.closest('.candidate-card');
   if (!card || card.classList.contains('added')) return;
-  const idx = parseInt(card.dataset.idx, 10);
-  if (lastSearchHits[idx]) addFromCandidate(lastSearchHits[idx]);
+  const gi  = parseInt(card.dataset.gi, 10);
+  const ci  = parseInt(card.dataset.ci, 10);
+  const src = searchGroups[gi]?.sources[ci];
+  if (src) addFromCandidate(src);
 });
 
 // Paste lookup
@@ -706,11 +738,11 @@ tableBody.addEventListener('click', e => {
 // Clear table
 clearTableBtn.addEventListener('click', () => {
   allPlayers = [];
-  lastSearchHits = [];
   hideTable();
   clearStatus();
   titleEl.style.display = 'none';
-  candidateArea.style.display = 'none';
+  // Refresh cards to un-mark "Added" state
+  if (searchGroups.length) renderSearchGroups(searchGroups);
 });
 
 // Login

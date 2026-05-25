@@ -196,8 +196,7 @@
 
     .search-row input[type="text"]:focus { border-color: #0a2342; }
 
-    #searchName { flex: 1; min-width: 180px; }
-    #searchCity { width: 140px; }
+    #searchName { flex: 1; min-width: 220px; }
 
     #searchBtn {
       padding: 10px 22px;
@@ -262,6 +261,25 @@
     .c-age  { font-size: 0.7rem; color: #888; font-weight: 400; margin-left: 4px; }
     .c-add  { display: block; margin-top: 6px; font-size: 0.75rem; font-weight: 600; color: #1565c0; }
     .candidate-card.added .c-add { color: #2e7d32; }
+
+    /* Search groups (multi-name) */
+    .search-group { margin-bottom: 14px; }
+
+    .group-label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #444;
+      margin-bottom: 7px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .group-label .g-query { color: #0a2342; }
+    .group-label .g-count { font-weight: 400; color: #aaa; font-size: 0.75rem; }
+    .group-label .g-none  { font-weight: 400; color: #e57373; font-size: 0.75rem; }
+
+    .group-cards { display: flex; flex-wrap: wrap; gap: 8px; }
 
     /* Table controls */
     #tableControls {
@@ -530,11 +548,13 @@
 
   <!-- Search mode -->
   <div id="searchSection">
-    <p class="hint">Type a player name to search UTR. If multiple results appear, click the correct player to add them to the table.</p>
+    <p class="hint">
+      One name per line. Results appear as cards — click the correct player to add to the table.
+      Add a city hint after the name for better matching (e.g. <em>Oliver Lu Potomac</em>).
+    </p>
     <div class="search-row">
-      <input type="text" id="searchName" placeholder="Player name (e.g. Oliver Lu)" autocomplete="off" spellcheck="false">
-      <input type="text" id="searchCity" placeholder="City (optional)" autocomplete="off" spellcheck="false">
-      <button id="searchBtn">Search</button>
+      <textarea id="searchName" rows="3" placeholder="Oliver Lu&#10;Daniel Tang&#10;Alice Chen Mc Lean" autocomplete="off" spellcheck="false" style="flex:1;min-width:220px;font-family:monospace;font-size:0.85rem;resize:vertical;padding:9px 12px;border:1px solid #ccc;border-radius:6px;outline:none;transition:border-color 0.2s"></textarea>
+      <button id="searchBtn" style="align-self:flex-start">Search</button>
     </div>
     <div id="candidateArea">
       <div id="candidateMsg"></div>
