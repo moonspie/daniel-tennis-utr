@@ -246,32 +246,36 @@ async function utrFetch(path, params = {}) {
   return res.json();
 }
 
+// Normalize city names for comparison: "Mc Lean" → "mclean", "Fort Worth" → "fortworth"
+function normCity(c) {
+  return (c || '').toLowerCase().replace(/\s+/g, '');
+}
+
 async function searchUtrPlayer(firstName, lastName, city = '', state = '') {
   const baseName = `${firstName} ${lastName}`.trim();
-  // Include city in query so UTR's engine ranks local players higher
-  const queryWithCity = city ? `${baseName} ${city}` : baseName;
-
-  let hits = (await utrFetch('/api/v2/search/players', { query: queryWithCity, top: 5 })).hits || [];
-
-  // Fallback: retry with name only if city-query returned nothing
-  if (!hits.length && city) {
-    hits = (await utrFetch('/api/v2/search/players', { query: baseName, top: 5 })).hits || [];
-  }
+  // Search by name only — adding city causes wrong matches (UTR's full-text search
+  // can pull unrelated players if the city string hits on other fields)
+  const hits = (await utrFetch('/api/v2/search/players', { query: baseName, top: 10 })).hits || [];
   if (!hits.length) return null;
 
   const nameLower = baseName.toLowerCase();
+  const targetCity = normCity(city);
+  const targetState = (state || '').toLowerCase().trim();
 
-  // Score: exact name match > location match from UTR data (if available)
-  // No bonus for high UTR — avoids picking high-rated adults over the correct junior
   const scored = hits.map(h => {
     const src = h.source;
     const fullName = `${src.firstName} ${src.lastName}`.toLowerCase();
     let score = 0;
     if (fullName === nameLower) score += 100;
-    const srcCity = (src.location?.city || src.city || '').toLowerCase();
-    const srcState = (src.location?.state || src.state || '').toLowerCase();
-    if (city && srcCity && srcCity === city.toLowerCase()) score += 20;
-    if (state && srcState && srcState === state.toLowerCase()) score += 10;
+
+    // UTR search returns location as { display: "City, ST" } or { city, state }
+    const locDisplay = src.location?.display || '';
+    const locParts = locDisplay.split(',');
+    const srcCity = normCity(src.location?.city || locParts[0]);
+    const srcState = (src.location?.state || locParts[1] || '').toLowerCase().trim();
+
+    if (targetCity && srcCity && srcCity === targetCity) score += 20;
+    if (targetState && srcState && srcState === targetState) score += 10;
     return { src, score };
   });
 
