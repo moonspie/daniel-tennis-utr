@@ -352,7 +352,10 @@ async function loadTournament() {
     setProgress(20);
 
     if (!participants.length) {
-      showStatus('No players found. The tournament may have expired or the ID is incorrect.', 'error');
+      showStatus(
+        'No players found. USTA removes past tournament data — this only works for upcoming or recently-started tournaments. Try a URL from playtennis.usta.com for an event that hasn\'t ended yet.',
+        'error'
+      );
       emptyMsg.style.display = 'block';
       setProgress(0);
       return;
@@ -423,7 +426,10 @@ async function loadTournament() {
     setTimeout(() => setProgress(0), 800);
 
   } catch (err) {
-    showStatus(`Error: ${err.message}`, 'error');
+    const msg = err.message.includes('not found')
+      ? 'Tournament not found — USTA only keeps data for upcoming/active tournaments. Paste a URL for an event that hasn\'t ended yet.'
+      : `Error: ${err.message}`;
+    showStatus(msg, 'error');
     setProgress(0);
     console.error(err);
   } finally {
