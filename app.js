@@ -279,6 +279,14 @@ async function searchUtrPlayer(firstName, lastName, city = '', state = '') {
   return scored[0]?.src || null;
 }
 
+async function fetchUtrProfile(utrId) {
+  try {
+    return await utrFetch(`/api/v1/player/${utrId}`);
+  } catch {
+    return null;
+  }
+}
+
 async function fetchUtrResults(utrId, year = CURRENT_YEAR) {
   try {
     const data = await utrFetch(`/api/v1/player/${utrId}/results`, { type: 'singles', year });
@@ -286,6 +294,21 @@ async function fetchUtrResults(utrId, year = CURRENT_YEAR) {
   } catch {
     return null;
   }
+}
+
+// Apply UTR rating fields from any API source, preferring non-masked values
+function applyUtrRating(player, src) {
+  if (!src) return;
+  // Only override if the new source has a non-masked display value
+  const isReal = v => v && !String(v).includes('.xx');
+  if (src.singlesUtr != null) player.singles = src.singlesUtr;
+  if (src.doublesUtr != null) player.doubles = src.doublesUtr;
+  if (isReal(src.singlesUtrDisplay)) player.singlesDisplay = src.singlesUtrDisplay;
+  else if (src.singlesUtrDisplay && !player.singlesDisplay) player.singlesDisplay = src.singlesUtrDisplay;
+  if (isReal(src.doublesUtrDisplay)) player.doublesDisplay = src.doublesUtrDisplay;
+  else if (src.doublesUtrDisplay && !player.doublesDisplay) player.doublesDisplay = src.doublesUtrDisplay;
+  if (src.ratingStatusSingles) player.singlesStatus = src.ratingStatusSingles;
+  if (src.ratingStatusDoubles) player.doublesStatus = src.ratingStatusDoubles;
 }
 
 // Parse recent matches from results data (up to N matches)
@@ -478,19 +501,20 @@ async function loadTournament() {
           const utrPlayer = await searchUtrPlayer(player.firstName, player.lastName, player.city, player.state);
           if (utrPlayer) {
             player.utrProfileId = utrPlayer.id;
-            player.singles = utrPlayer.singlesUtr || 0;
-            player.doubles = utrPlayer.doublesUtr || 0;
-            player.singlesDisplay = utrPlayer.singlesUtrDisplay || '—';
-            player.doublesDisplay = utrPlayer.doublesUtrDisplay || '—';
-            player.singlesStatus = utrPlayer.ratingStatusSingles;
-            player.doublesStatus = utrPlayer.ratingStatusDoubles;
+            applyUtrRating(player, utrPlayer);  // search result (may be masked)
 
-            // Fetch results
-            const results = await fetchUtrResults(utrPlayer.id);
+            // Profile fetch often returns real UTR when authenticated
+            const [profile, results] = await Promise.all([
+              fetchUtrProfile(utrPlayer.id),
+              fetchUtrResults(utrPlayer.id),
+            ]);
+            applyUtrRating(player, profile);    // override with profile data if better
+
             if (results) {
               player.wins = results.wins;
               player.losses = results.losses;
               player.matches = parseRecentMatches(results, utrPlayer.id);
+              applyUtrRating(player, results);  // results may also carry real UTR
             }
           }
         } catch (err) {
@@ -572,17 +596,19 @@ async function loadManual() {
         const utrPlayer = await searchUtrPlayer(player.firstName, player.lastName, player.city, player.state);
         if (utrPlayer) {
           player.utrProfileId = utrPlayer.id;
-          player.singles = utrPlayer.singlesUtr || 0;
-          player.doubles = utrPlayer.doublesUtr || 0;
-          player.singlesDisplay = utrPlayer.singlesUtrDisplay || '—';
-          player.doublesDisplay = utrPlayer.doublesUtrDisplay || '—';
-          player.singlesStatus = utrPlayer.ratingStatusSingles;
-          player.doublesStatus = utrPlayer.ratingStatusDoubles;
-          const results = await fetchUtrResults(utrPlayer.id);
+          applyUtrRating(player, utrPlayer);
+
+          const [profile, results] = await Promise.all([
+            fetchUtrProfile(utrPlayer.id),
+            fetchUtrResults(utrPlayer.id),
+          ]);
+          applyUtrRating(player, profile);
+
           if (results) {
             player.wins = results.wins;
             player.losses = results.losses;
             player.matches = parseRecentMatches(results, utrPlayer.id);
+            applyUtrRating(player, results);
           }
         }
       } catch (err) {
@@ -704,8 +730,22 @@ const cookieStatus = document.getElementById('utrCookieStatus');
 
 cookieInput?.addEventListener('input', () => {
   utrCookie = cookieInput.value.trim();
-  cookieStatus.textContent = utrCookie ? 'Cookie saved — will use for next lookup.' : '';
-  cookieStatus.style.color = utrCookie ? '#2e7d32' : '#888';
+  if (!utrCookie) { cookieStatus.textContent = ''; return; }
+
+  const jwtMatch = utrCookie.match(/\bjwt=([^;]+)/);
+  if (jwtMatch) {
+    try {
+      const payload = JSON.parse(atob(jwtMatch[1].split('.')[1]));
+      cookieStatus.textContent = `Logged in as ${payload.email} (UTR member ${payload.MemberId})`;
+      cookieStatus.style.color = '#2e7d32';
+    } catch {
+      cookieStatus.textContent = 'JWT found but could not parse — cookie saved anyway.';
+      cookieStatus.style.color = '#f57f17';
+    }
+  } else {
+    cookieStatus.textContent = 'Warning: no UTR JWT found in this cookie string.';
+    cookieStatus.style.color = '#c62828';
+  }
 });
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
