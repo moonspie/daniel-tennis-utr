@@ -247,30 +247,36 @@ async function utrFetch(path, params = {}) {
 }
 
 async function searchUtrPlayer(firstName, lastName, city = '', state = '') {
-  const query = `${firstName} ${lastName}`.trim();
-  const data = await utrFetch('/api/v2/search/players', { query, top: 5 });
-  const hits = data.hits || [];
+  const baseName = `${firstName} ${lastName}`.trim();
+  // Include city in query so UTR's engine ranks local players higher
+  const queryWithCity = city ? `${baseName} ${city}` : baseName;
+
+  let hits = (await utrFetch('/api/v2/search/players', { query: queryWithCity, top: 5 })).hits || [];
+
+  // Fallback: retry with name only if city-query returned nothing
+  if (!hits.length && city) {
+    hits = (await utrFetch('/api/v2/search/players', { query: baseName, top: 5 })).hits || [];
+  }
   if (!hits.length) return null;
 
-  const nameLower = query.toLowerCase();
+  const nameLower = baseName.toLowerCase();
 
-  // Score each candidate: exact name > location match > has a real UTR rating
+  // Score: exact name match > location match from UTR data (if available)
+  // No bonus for high UTR — avoids picking high-rated adults over the correct junior
   const scored = hits.map(h => {
     const src = h.source;
     const fullName = `${src.firstName} ${src.lastName}`.toLowerCase();
     let score = 0;
     if (fullName === nameLower) score += 100;
-    // UTR may expose location under different field shapes
     const srcCity = (src.location?.city || src.city || '').toLowerCase();
     const srcState = (src.location?.state || src.state || '').toLowerCase();
     if (city && srcCity && srcCity === city.toLowerCase()) score += 20;
     if (state && srcState && srcState === state.toLowerCase()) score += 10;
-    if (src.singlesUtr > 0) score += 5;
     return { src, score };
   });
 
   scored.sort((a, b) => b.score - a.score);
-  return scored[0].src || null;
+  return scored[0]?.src || null;
 }
 
 async function fetchUtrResults(utrId, year = CURRENT_YEAR) {

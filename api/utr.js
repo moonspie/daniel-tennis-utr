@@ -29,12 +29,19 @@ export default async function handler(req, res) {
 
   try {
     const reqHeaders = {
-      'User-Agent': 'Mozilla/5.0 (compatible; tennis-utr-lookup)',
-      'Accept': 'application/json',
+      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+      'Accept': 'application/json, text/plain, */*',
+      'Accept-Language': 'en-US,en;q=0.9',
+      'Origin': 'https://app.universaltennis.com',
+      'Referer': 'https://app.universaltennis.com/',
     };
-    // Forward UTR session cookie if provided by the client
+    // Forward UTR session cookie + extract JWT as Authorization Bearer
     const utrCookie = req.headers['x-utr-cookie'];
-    if (utrCookie) reqHeaders['Cookie'] = utrCookie;
+    if (utrCookie) {
+      reqHeaders['Cookie'] = utrCookie;
+      const jwtMatch = utrCookie.match(/\bjwt=([^;]+)/);
+      if (jwtMatch) reqHeaders['Authorization'] = `Bearer ${jwtMatch[1]}`;
+    }
 
     const upstream = await fetch(url, { headers: reqHeaders });
 
