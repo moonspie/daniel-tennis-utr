@@ -23,11 +23,7 @@
       gap: 12px;
     }
 
-    header h1 {
-      font-size: 1.25rem;
-      font-weight: 600;
-      letter-spacing: -0.3px;
-    }
+    header h1 { font-size: 1.25rem; font-weight: 600; letter-spacing: -0.3px; }
 
     header span.badge {
       background: #4fc3f7;
@@ -39,34 +35,187 @@
       text-transform: uppercase;
     }
 
+    /* ── Auth bar ── */
+    #authBar {
+      background: #fff;
+      border-bottom: 1px solid #e0e0e0;
+      padding: 14px 24px;
+    }
+
+    #authLogin {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    #authLogin label {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #444;
+      white-space: nowrap;
+    }
+
+    #authLogin input[type="email"],
+    #authLogin input[type="password"] {
+      padding: 8px 12px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      width: 200px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    #authLogin input:focus { border-color: #0a2342; }
+
+    #loginBtn {
+      padding: 8px 18px;
+      background: #0a2342;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.2s;
+    }
+
+    #loginBtn:hover { background: #1a3a5c; }
+    #loginBtn:disabled { background: #888; cursor: not-allowed; }
+
+    #loginError {
+      font-size: 0.8rem;
+      color: #c62828;
+      display: none;
+    }
+
+    #cookieToggle {
+      font-size: 0.78rem;
+      color: #888;
+      cursor: pointer;
+      text-decoration: underline;
+      white-space: nowrap;
+    }
+
+    #cookieFallback {
+      display: none;
+      margin-top: 10px;
+      padding: 10px 12px;
+      background: #fff8e1;
+      border: 1px solid #ffe082;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      color: #555;
+    }
+
+    #cookieFallback p { margin-bottom: 6px; line-height: 1.6; }
+
+    #utrCookieInput {
+      width: 100%;
+      max-width: 600px;
+      padding: 8px 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      font-family: monospace;
+    }
+
+    #cookieStatus { font-size: 0.78rem; margin-top: 4px; display: block; }
+
+    /* Connected state */
+    #authConnected {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .auth-dot {
+      width: 8px;
+      height: 8px;
+      background: #2e7d32;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    #authUserName {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: #1a1a2e;
+    }
+
+    #authPowerBadge {
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 10px;
+      text-transform: uppercase;
+    }
+
+    .badge-power { background: #e8f5e9; color: #2e7d32; }
+    .badge-standard { background: #f5f5f5; color: #757575; }
+    .badge-unknown { background: #e3f2fd; color: #1565c0; }
+
+    #authExpiry {
+      font-size: 0.75rem;
+      color: #aaa;
+    }
+
+    #logoutBtn {
+      font-size: 0.8rem;
+      color: #888;
+      background: none;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 4px 10px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    #logoutBtn:hover { background: #f5f5f5; color: #333; }
+
+    /* ── Input section ── */
     .input-section {
       background: white;
       border-bottom: 1px solid #e0e0e0;
       padding: 20px 24px;
     }
 
-    .input-row {
-      display: flex;
-      gap: 10px;
-      max-width: 900px;
+    .input-section h2 {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: #444;
+      margin-bottom: 6px;
     }
 
-    .input-row input {
-      flex: 1;
+    .hint {
+      font-size: 0.78rem;
+      color: #888;
+      margin-bottom: 10px;
+      line-height: 1.6;
+    }
+
+    #namesInput {
+      width: 100%;
+      max-width: 700px;
+      height: 180px;
       padding: 10px 14px;
       border: 1px solid #ccc;
       border-radius: 6px;
-      font-size: 0.9rem;
+      font-size: 0.85rem;
+      font-family: monospace;
+      resize: vertical;
       outline: none;
-      transition: border-color 0.2s;
+      display: block;
     }
 
-    .input-row input:focus { border-color: #0a2342; }
+    #namesInput:focus { border-color: #0a2342; }
 
-    .input-row input::placeholder { color: #aaa; }
-
-    button#loadBtn {
-      padding: 10px 22px;
+    #lookupBtn {
+      margin-top: 10px;
+      padding: 10px 24px;
       background: #0a2342;
       color: white;
       border: none;
@@ -74,19 +223,32 @@
       font-size: 0.9rem;
       font-weight: 600;
       cursor: pointer;
-      white-space: nowrap;
       transition: background 0.2s;
     }
 
-    button#loadBtn:hover { background: #1a3a5c; }
-    button#loadBtn:disabled { background: #888; cursor: not-allowed; }
+    #lookupBtn:hover { background: #1a3a5c; }
+    #lookupBtn:disabled { background: #888; cursor: not-allowed; }
 
-    .hint {
-      margin-top: 8px;
-      font-size: 0.78rem;
-      color: #888;
+    .progress-bar {
+      height: 4px;
+      background: #e0e0e0;
+      border-radius: 2px;
+      overflow: hidden;
+      margin-top: 10px;
+      display: none;
+      max-width: 700px;
     }
 
+    .progress-bar.visible { display: block; }
+
+    .progress-fill {
+      height: 100%;
+      background: #4fc3f7;
+      border-radius: 2px;
+      transition: width 0.3s ease;
+    }
+
+    /* ── Main / Table ── */
     .main { padding: 24px; max-width: 1100px; }
 
     #status {
@@ -97,8 +259,8 @@
       display: none;
     }
 
-    #status.info { background: #e3f2fd; color: #1565c0; display: block; }
-    #status.error { background: #ffebee; color: #c62828; display: block; }
+    #status.info    { background: #e3f2fd; color: #1565c0; display: block; }
+    #status.error   { background: #ffebee; color: #c62828; display: block; }
     #status.success { background: #e8f5e9; color: #2e7d32; display: block; }
 
     #tournamentTitle {
@@ -116,11 +278,7 @@
       box-shadow: 0 1px 4px rgba(0,0,0,0.08);
     }
 
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.88rem;
-    }
+    table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
 
     thead th {
       background: #0a2342;
@@ -136,22 +294,21 @@
     }
 
     thead th:hover { background: #1a3a5c; }
-    thead th.sorted-asc::after { content: ' ↑'; }
-    thead th.sorted-desc::after { content: ' ↓'; }
+    thead th.sorted-asc::after  { content: ' ^'; }
+    thead th.sorted-desc::after { content: ' v'; }
 
     tbody tr { border-bottom: 1px solid #f0f0f0; transition: background 0.1s; }
     tbody tr:hover { background: #fafbff; }
     tbody tr:last-child { border-bottom: none; }
 
     td { padding: 11px 14px; vertical-align: top; }
-
     td.rank { color: #888; font-size: 0.8rem; width: 36px; text-align: center; }
-
     td.name { font-weight: 600; }
     td.name a { color: #0a2342; text-decoration: none; }
     td.name a:hover { text-decoration: underline; }
     td.name .location { color: #888; font-size: 0.76rem; font-weight: 400; margin-top: 1px; }
-    td.name .event-tag {
+
+    .event-tag {
       display: inline-block;
       font-size: 0.66rem;
       font-weight: 700;
@@ -164,10 +321,7 @@
       letter-spacing: 0.3px;
     }
 
-    .utr-score {
-      font-weight: 700;
-      font-size: 1rem;
-    }
+    .utr-score { font-weight: 700; font-size: 1rem; }
 
     .utr-badge {
       display: inline-block;
@@ -179,43 +333,24 @@
       vertical-align: middle;
     }
 
-    .badge-rated { background: #e8f5e9; color: #2e7d32; }
+    .badge-rated     { background: #e8f5e9; color: #2e7d32; }
     .badge-projected { background: #fff8e1; color: #f57f17; }
-    .badge-unrated { background: #f5f5f5; color: #757575; }
+    .badge-unrated   { background: #f5f5f5; color: #757575; }
 
     td.wl { white-space: nowrap; }
     td.wl .wl-num { font-weight: 600; }
-    td.wl .wl-num.wins { color: #2e7d32; }
+    td.wl .wl-num.wins   { color: #2e7d32; }
     td.wl .wl-num.losses { color: #c62828; }
 
     .matches { font-size: 0.78rem; color: #555; line-height: 1.7; }
-    .match-win { color: #2e7d32; font-weight: 600; }
+    .match-win  { color: #2e7d32; font-weight: 600; }
     .match-loss { color: #c62828; font-weight: 600; }
-    .match-opp { color: #333; }
+    .match-opp   { color: #333; }
     .match-score { color: #666; font-family: monospace; }
-    .match-date { color: #aaa; font-size: 0.72rem; }
+    .match-date  { color: #aaa; font-size: 0.72rem; }
 
     .loading-cell { color: #aaa; font-style: italic; }
-
     .no-utr { color: #bbb; font-style: italic; font-size: 0.82rem; }
-
-    .progress-bar {
-      height: 4px;
-      background: #e0e0e0;
-      border-radius: 2px;
-      overflow: hidden;
-      margin-top: 8px;
-      display: none;
-    }
-
-    .progress-bar.visible { display: block; }
-
-    .progress-fill {
-      height: 100%;
-      background: #4fc3f7;
-      border-radius: 2px;
-      transition: width 0.3s ease;
-    }
 
     #emptyMsg {
       text-align: center;
@@ -224,49 +359,6 @@
       font-size: 0.9rem;
       display: none;
     }
-
-    .tabs {
-      display: flex;
-      gap: 0;
-      margin-bottom: 14px;
-    }
-
-    .tab-btn {
-      padding: 8px 18px;
-      border: 1px solid #ccc;
-      background: #f5f5f5;
-      cursor: pointer;
-      font-size: 0.85rem;
-      font-weight: 600;
-      color: #555;
-      transition: all 0.15s;
-    }
-
-    .tab-btn:first-child { border-radius: 6px 0 0 6px; }
-    .tab-btn:last-child  { border-radius: 0 6px 6px 0; border-left: none; }
-
-    .tab-btn.active {
-      background: #0a2342;
-      color: white;
-      border-color: #0a2342;
-    }
-
-    #manualSection { display: none; }
-
-    #manualSection textarea {
-      width: 100%;
-      max-width: 700px;
-      height: 120px;
-      padding: 10px 14px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      font-size: 0.88rem;
-      font-family: monospace;
-      resize: vertical;
-      outline: none;
-    }
-
-    #manualSection textarea:focus { border-color: #0a2342; }
 
     footer {
       text-align: center;
@@ -283,69 +375,55 @@
   <span class="badge">Beta</span>
 </header>
 
-<div class="input-section">
-  <div class="tabs">
-    <button class="tab-btn active" id="tabUrl">USTA URL</button>
-    <button class="tab-btn" id="tabManual">Paste Player Names</button>
-    <button class="tab-btn" id="tabBookmarklet">Bookmarklet Setup</button>
+<!-- Auth bar -->
+<div id="authBar">
+  <!-- Login form -->
+  <div id="authLogin">
+    <label>UTR Login:</label>
+    <input type="email" id="loginEmail" placeholder="Email" autocomplete="email">
+    <input type="password" id="loginPassword" placeholder="Password" autocomplete="current-password">
+    <button id="loginBtn">Sign In</button>
+    <span id="loginError"></span>
+    <span id="cookieToggle">Use session cookie instead</span>
   </div>
 
-  <div id="urlSection">
-    <div class="input-row">
-      <input id="urlInput" type="text"
-        placeholder="https://playtennis.usta.com/Competitions/.../Tournaments/overview/UUID"
-        autocomplete="off" spellcheck="false">
-      <button id="loadBtn">Load</button>
-    </div>
-    <p class="hint">Works for publicly accessible USTA tournaments. Some club-level events require login — use the "Paste Player Names" tab instead.</p>
-  </div>
-
-  <div id="manualSection">
-    <p class="hint" style="margin-bottom:8px">
-      <strong>Option A:</strong> On the USTA Players page, select all (Cmd+A) and copy — paste the entire page here. Names, age groups, and locations are extracted automatically.<br>
-      <strong>Option B:</strong> One name per line (e.g. <em>John Smith</em>).
+  <!-- Cookie fallback (hidden by default) -->
+  <div id="cookieFallback">
+    <p>
+      Log in at <strong>app.universaltennis.com</strong>, open DevTools (F12) &rarr; Network tab, reload,
+      filter by <code>search/players</code>, click the request &rarr; Request Headers &rarr; copy <code>Cookie:</code> value.
     </p>
-    <textarea id="namesInput" style="height:200px" placeholder="Paste full USTA Players page content, or one name per line:&#10;&#10;BELL, Thomaz    Boys' 12 &amp; under Singles    San Juan, PR    M&#10;BERMUDEZ, Vicente    Boys' 16 &amp; under Singles    Arlington, VA    M&#10;&#10;— or —&#10;&#10;John Smith&#10;Jane Doe"></textarea>
-    <div style="margin-top:8px">
-      <button id="loadBtn2" style="padding:10px 22px;background:#0a2342;color:white;border:none;border-radius:6px;font-size:0.9rem;font-weight:600;cursor:pointer">Look Up UTR</button>
-    </div>
+    <input id="utrCookieInput" type="password" placeholder="Paste UTR Cookie header value here...">
+    <span id="cookieStatus"></span>
   </div>
 
-  <div id="bookmarkletSection" style="display:none; max-width:700px">
-    <p class="hint" style="margin-bottom:12px">The bookmarklet runs in your browser on the USTA Players page. It reads the rendered player list (even for club-level tournaments that require login) and sends the names here automatically.</p>
-    <p style="font-size:0.88rem;font-weight:600;margin-bottom:8px;color:#333">Step 1 — Drag this link to your bookmarks bar:</p>
-    <div style="margin-bottom:16px">
-      <a id="bookmarkletLink" href="" style="display:inline-block;padding:10px 18px;background:#1565c0;color:white;text-decoration:none;border-radius:6px;font-size:0.9rem;font-weight:600;cursor:grab">
-        &#128279; USTA → UTR Lookup
-      </a>
-      <span style="margin-left:12px;font-size:0.78rem;color:#888">(drag this to your bookmarks bar)</span>
-    </div>
-    <p style="font-size:0.88rem;font-weight:600;margin-bottom:4px;color:#333">Step 2 — Use it:</p>
-    <ol style="font-size:0.85rem;color:#555;line-height:1.9;padding-left:20px">
-      <li>Go to a USTA tournament's <strong>Players</strong> page (log in if needed)</li>
-      <li>Wait for the player list to load</li>
-      <li>Click the <strong>USTA → UTR Lookup</strong> bookmark</li>
-      <li>This site opens with all player names pre-filled, UTR lookup starts automatically</li>
-    </ol>
+  <!-- Connected state -->
+  <div id="authConnected">
+    <div class="auth-dot"></div>
+    <span id="authUserName"></span>
+    <span id="authPowerBadge" class="badge-unknown"></span>
+    <span id="authExpiry"></span>
+    <button id="logoutBtn">Sign out</button>
   </div>
+</div>
 
-  <details style="margin-top:12px; max-width:780px">
-    <summary style="cursor:pointer; font-size:0.82rem; font-weight:600; color:#666; user-select:none; list-style:none; display:flex; align-items:center; gap:6px">
-      <span style="font-size:0.75rem">&#9654;</span> UTR login (optional &mdash; needed for real scores instead of 0.xx)
-    </summary>
-    <div style="margin-top:8px; padding:12px 14px; background:#fff8e1; border:1px solid #ffe082; border-radius:6px; font-size:0.8rem; color:#555; line-height:1.7">
-      <ol style="padding-left:18px; margin-bottom:10px">
-        <li>Open <strong>app.universaltennis.com</strong> in Chrome and log in</li>
-        <li>Open DevTools (<kbd>F12</kbd> or <kbd>Cmd+Option+I</kbd>) &rarr; <strong>Network</strong> tab</li>
-        <li>Reload the UTR page, then filter requests by <code>search/players</code></li>
-        <li>Click that request &rarr; <strong>Request Headers</strong> &rarr; copy the value next to <code>Cookie:</code></li>
-        <li>Paste it below</li>
-      </ol>
-      <input id="utrCookieInput" type="password" placeholder="Paste UTR Cookie header value here..."
-             style="width:100%; padding:8px 10px; border:1px solid #ccc; border-radius:4px; font-size:0.8rem; font-family:monospace; background:white">
-      <span id="utrCookieStatus" style="font-size:0.78rem; margin-top:4px; display:block"></span>
-    </div>
-  </details>
+<!-- Paste input -->
+<div class="input-section">
+  <h2>Paste Player Names</h2>
+  <p class="hint">
+    <strong>Option A:</strong> On the USTA Players page, select all (Cmd+A) and copy — paste the entire page here. Names, age groups, and locations are extracted automatically.<br>
+    <strong>Option B:</strong> One name per line (e.g. <em>John Smith</em>).
+  </p>
+  <textarea id="namesInput" placeholder="Paste full USTA Players page content, or one name per line:
+
+BELL, Thomaz    Boys' 12 &amp; under Singles    San Juan, PR    M
+BERMUDEZ, Vicente    Boys' 16 &amp; under Singles    Arlington, VA    M
+
+— or —
+
+John Smith
+Jane Doe"></textarea>
+  <button id="lookupBtn">Look Up UTR</button>
 
   <div class="progress-bar" id="progressBar">
     <div class="progress-fill" id="progressFill"></div>
@@ -371,7 +449,7 @@
       <tbody id="tableBody"></tbody>
     </table>
   </div>
-  <div id="emptyMsg">No players found for this tournament.</div>
+  <div id="emptyMsg">No players found.</div>
 </div>
 
 <footer>
