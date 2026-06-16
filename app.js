@@ -209,7 +209,11 @@ function parseUstaDump(raw) {
   for (const line of raw.split('\n')) {
     const trimmed = line.trim();
     const cols = trimmed.split(/\s{2,}|\t+/);
-    const nameCol = cols[0] || '';
+
+    // USTA adds a leading rank/seed number column before tournament starts
+    const offset = /^\d+$/.test(cols[0] || '') ? 1 : 0;
+
+    const nameCol = cols[offset] || '';
     const nameMatch = nameCol.match(/^([A-Z][A-Z\s\-']*),\s*(.+)$/);
     if (!nameMatch) continue;
 
@@ -217,14 +221,14 @@ function parseUstaDump(raw) {
     const firstName = nameMatch[2].trim();
 
     let event = '', city = '', state = '';
-    if (cols.length >= 4) {
-      event = cols[1]?.trim() || '';
-      const cityState = cols[2]?.trim() || '';
+    if (cols.length >= offset + 4) {
+      event = cols[offset + 1]?.trim() || '';
+      const cityState = cols[offset + 2]?.trim() || '';
       const csMatch = cityState.match(/^(.+),\s*([A-Z]{2})$/);
       if (csMatch) { city = csMatch[1].trim(); state = csMatch[2].trim(); }
       else { city = cityState; }
-    } else if (cols.length >= 2) {
-      event = cols[1]?.trim() || '';
+    } else if (cols.length >= offset + 2) {
+      event = cols[offset + 1]?.trim() || '';
     }
 
     const key = `${firstName} ${lastName}`.toLowerCase();
@@ -666,7 +670,7 @@ async function handleLookup() {
   const raw = namesInput.value.trim();
   if (!raw) { showStatus('Please paste at least one player name.', 'error'); return; }
 
-  const isUstaDump = raw.split('\n').some(l => /^[A-Z][A-Z\s\-']*,\s+[A-Z][a-z]/.test(l.trim()));
+  const isUstaDump = raw.split('\n').some(l => /^(?:\d+\s+)?[A-Z][A-Z\s\-']*,\s+[A-Z][a-z]/.test(l.trim()));
 
   let names;
   if (isUstaDump) {
@@ -765,6 +769,12 @@ candidateList.addEventListener('click', e => {
   } else {
     addFromCandidate(src);
   }
+});
+
+// Clear paste input
+document.getElementById('clearInputBtn').addEventListener('click', () => {
+  namesInput.value = '';
+  namesInput.focus();
 });
 
 // Paste lookup
