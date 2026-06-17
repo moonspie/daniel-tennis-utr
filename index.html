@@ -562,7 +562,7 @@
       Click a result card to add; click again to remove.
     </p>
     <div class="search-row">
-      <textarea id="searchName" rows="4" placeholder="Oliver Lu&#10;Oliver Lu, Potomac&#10;Alice Chen, 12&#10;Alice Chen, Mc Lean, B12" autocomplete="off" spellcheck="false" style="flex:1;min-width:220px;font-family:monospace;font-size:0.85rem;resize:vertical;padding:9px 12px;border:1px solid #ccc;border-radius:6px;outline:none;transition:border-color 0.2s"></textarea>
+      <textarea id="searchName" rows="4" autocomplete="off" spellcheck="false" style="flex:1;min-width:220px;font-family:monospace;font-size:0.85rem;resize:vertical;padding:9px 12px;border:1px solid #ccc;border-radius:6px;outline:none;transition:border-color 0.2s"></textarea>
       <button id="searchBtn" style="align-self:flex-start">Search</button>
     </div>
     <div id="candidateArea">
@@ -577,15 +577,7 @@
       <strong>Option A:</strong> On the USTA Players page, select all (Cmd+A) and copy — paste the entire page here. Names, age groups, and locations are extracted automatically.<br>
       <strong>Option B:</strong> One name per line (e.g. <em>John Smith</em>).
     </p>
-    <textarea id="namesInput" placeholder="Paste full USTA Players page content, or one name per line:
-
-BELL, Thomaz    Boys' 12 &amp; under Singles    San Juan, PR    M
-BERMUDEZ, Vicente    Boys' 16 &amp; under Singles    Arlington, VA    M
-
-— or —
-
-John Smith
-Jane Doe"></textarea>
+    <textarea id="namesInput"></textarea>
     <div style="display:flex;gap:8px;margin-top:10px;align-items:center">
       <button id="lookupBtn">Look Up All</button>
       <button id="clearInputBtn" style="padding:10px 16px;background:none;border:1px solid #ccc;border-radius:6px;font-size:0.88rem;color:#666;cursor:pointer;transition:all 0.15s" onmouseover="this.style.background='#f5f5f5';this.style.color='#333'" onmouseout="this.style.background='none';this.style.color='#666'">Clear</button>
