@@ -474,6 +474,8 @@
     .loading-cell { color: #aaa; font-style: italic; }
     .no-utr { color: #bbb; font-style: italic; font-size: 0.82rem; }
 
+    #playerTable.hide-matches .matches-col { display: none; }
+
     td.remove-col { width: 28px; padding: 0 8px; }
     .remove-btn {
       background: none;
@@ -602,19 +604,21 @@ Jane Doe"></textarea>
   <div id="tableControls">
     <span id="tableCountLabel"></span>
     <button id="clearTableBtn">Clear table</button>
+    <label style="display:flex;align-items:center;gap:6px;font-size:0.82rem;color:#555;cursor:pointer;white-space:nowrap;margin-left:8px">
+      <input type="checkbox" id="showMatchesChk"> Show Recent Matches
+    </label>
   </div>
 
   <div class="table-wrap" id="tableWrap" style="display:none">
-    <table id="playerTable">
+    <table id="playerTable" class="hide-matches">
       <thead>
         <tr>
           <th class="rank no-sort">#</th>
           <th data-col="name">Player</th>
           <th data-col="singles" class="sorted-desc">UTR Singles</th>
           <th data-col="doubles">UTR Doubles</th>
-          <th data-col="wins">Wins</th>
-          <th data-col="losses">Losses</th>
-          <th class="no-sort">Recent Matches (Singles)</th>
+          <th data-col="wins">W / L</th>
+          <th class="no-sort matches-col">Recent Matches (Singles)</th>
           <th class="no-sort remove-col"></th>
         </tr>
       </thead>

@@ -42,6 +42,10 @@ const cookieFallback = document.getElementById('cookieFallback');
 const utrCookieInput = document.getElementById('utrCookieInput');
 const cookieStatus   = document.getElementById('cookieStatus');
 
+// Table column toggle
+const showMatchesChk = document.getElementById('showMatchesChk');
+const playerTable    = document.getElementById('playerTable');
+
 // Search DOM
 const tabSearch      = document.getElementById('tabSearch');
 const tabPaste       = document.getElementById('tabPaste');
@@ -587,8 +591,7 @@ function renderRow(p, rank, origIdx) {
       ? `<span class="utr-score">${p.doublesDisplay || '--'}</span>${ratingBadge(p.doublesStatus)}`
       : '';
 
-  const winsCell   = p.loading ? '' : (p.wins   != null ? `<span class="wl-num wins">${p.wins}</span>`   : '--');
-  const lossesCell = p.loading ? '' : (p.losses != null ? `<span class="wl-num losses">${p.losses}</span>` : '--');
+  const wlCell = p.loading ? '' : `<span class="wl-num wins">${p.wins != null ? p.wins : '--'}</span> / <span class="wl-num losses">${p.losses != null ? p.losses : '--'}</span>`;
 
   const matchesCell = p.loading ? '' : (p.matches || []).map(m => {
     const wl = m.won ? `<span class="match-win">W</span>` : `<span class="match-loss">L</span>`;
@@ -600,9 +603,8 @@ function renderRow(p, rank, origIdx) {
     <td class="name">${nameCell}${eventTag}${location ? `<div class="location">${location}</div>` : ''}</td>
     <td>${singlesCell}</td>
     <td>${doublesCell}</td>
-    <td class="wl">${winsCell}</td>
-    <td class="wl">${lossesCell}</td>
-    <td class="matches">${matchesCell}</td>
+    <td class="wl">${wlCell}</td>
+    <td class="matches matches-col">${matchesCell}</td>
     <td class="remove-col"><button class="remove-btn" data-orig="${origIdx}" title="Remove">x</button></td>
   `;
 }
@@ -879,5 +881,12 @@ utrCookieInput.addEventListener('input', () => {
 });
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
+
+namesInput.value = '';
+searchNameEl.value = '';
+
+showMatchesChk.addEventListener('change', () => {
+  playerTable.classList.toggle('hide-matches', !showMatchesChk.checked);
+});
 
 loadStoredAuth();
